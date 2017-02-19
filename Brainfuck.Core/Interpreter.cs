@@ -2,12 +2,10 @@
 
 namespace Brainfuck.Core
 {
-    using ArrayElement = Byte;
+    using BufferElement = Byte;
 
     public static class Interpreter
     {
-        public const int ArraySize = 1 << 10;
-
         public static void Execute(string source)
         {
             Execute(Parser.Parse(source));
@@ -15,7 +13,7 @@ namespace Brainfuck.Core
 
         public static void Execute(Program program)
         {
-            ArrayElement[] array = new ArrayElement[ArraySize];
+            Buffer<BufferElement> buffer = new Buffer<BufferElement>();
             int ptr = 0;
 
             for (int i = 0; i < program.Source.Length; i++)
@@ -29,25 +27,25 @@ namespace Brainfuck.Core
                         ptr--;
                         break;
                     case '+':
-                        array[ptr]++;
+                        buffer[ptr]++;
                         break;
                     case '-':
-                        array[ptr]--;
+                        buffer[ptr]--;
                         break;
                     case '.':
-                        Put(array[ptr]);
+                        Put(buffer[ptr]);
                         break;
                     case ',':
-                        array[ptr] = Read();
+                        buffer[ptr] = Read();
                         break;
                     case '[':
-                        if (array[ptr] == 0)
+                        if (buffer[ptr] == 0)
                         {
                             i = program.OpeningDest[i];
                         }
                         break;
                     case ']':
-                        if (array[ptr] != 0)
+                        if (buffer[ptr] != 0)
                         {
                             i = program.ClosingDest[i];
                         }
@@ -59,8 +57,8 @@ namespace Brainfuck.Core
             }
         }
 
-        private static ArrayElement Read() => (ArrayElement)Console.Read();
-        private static void Put(ArrayElement value) => Console.Write((char)value);
+        private static BufferElement Read() => (BufferElement)Console.Read();
+        private static void Put(BufferElement value) => Console.Write((char)value);
         private static void ManageUnknownChar(char value) => Console.WriteLine($"Warning : Unknown char '{value}'");
     }
 }
