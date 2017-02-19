@@ -5,14 +5,12 @@ namespace Brainfuck.Core
     public class Program
     {
         public string Source { get; }
-        public ImmutableArray<int> OpeningDest { get; }
-        public ImmutableArray<int> ClosingDest { get; }
+        public ImmutableArray<int> Dests { get; }
 
-        internal Program(string source, ImmutableArray<int> openingDest, ImmutableArray<int> closingDest)
+        internal Program(string source, ImmutableArray<int> dests)
         {
             Source = source;
-            OpeningDest = openingDest;
-            ClosingDest = closingDest;
+            Dests = dests;
         }
     }
 }

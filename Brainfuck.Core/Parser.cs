@@ -8,11 +8,8 @@ namespace Brainfuck.Core
         public static Program Parse(string source)
         {
             var bracketStack = new Stack<int>();
-            var openingDest = ImmutableArray.CreateBuilder<int>(source.Length);
-            var closingDest = ImmutableArray.CreateBuilder<int>(source.Length);
-
-            openingDest.Count = source.Length;
-            closingDest.Count = source.Length;
+            var dests = ImmutableArray.CreateBuilder<int>(source.Length);
+            dests.Count = source.Length;
 
             for (int i = 0; i < source.Length; i++)
             {
@@ -26,14 +23,14 @@ namespace Brainfuck.Core
                     case ']':
                         {
                             int startAddress = bracketStack.Pop();
-                            openingDest[startAddress] = i;
-                            closingDest[i] = startAddress;
+                            dests[startAddress] = i;
+                            dests[i] = startAddress;
                             break;
                         }
                 }
             }
 
-            return new Program(source, openingDest.MoveToImmutable(), closingDest.MoveToImmutable());
+            return new Program(source, dests.MoveToImmutable());
         }
     }
 }

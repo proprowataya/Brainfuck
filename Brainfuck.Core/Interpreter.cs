@@ -41,13 +41,13 @@ namespace Brainfuck.Core
                     case '[':
                         if (buffer[ptr] == 0)
                         {
-                            i = program.OpeningDest[i];
+                            i = program.Dests[i];
                         }
                         break;
                     case ']':
                         if (buffer[ptr] != 0)
                         {
-                            i = program.ClosingDest[i];
+                            i = program.Dests[i];
                         }
                         break;
                     default:
