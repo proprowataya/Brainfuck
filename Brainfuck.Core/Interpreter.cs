@@ -2,7 +2,7 @@
 
 namespace Brainfuck.Core
 {
-    using BufferElement = Byte;
+    using BufferElement = Int32;
 
     public static class Interpreter
     {
