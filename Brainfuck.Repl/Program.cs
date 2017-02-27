@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Text;
 using Brainfuck.Core;
 
@@ -16,10 +17,15 @@ namespace Brainfuck.Repl
                 string source = ReadCode();
                 if (source == "exit")
                     break;
+                Brainfuck.Core.Program program = Parser.Parse(source);
 
-                Interpreter.Execute(source);
-                Console.WriteLine();
-                Console.WriteLine();
+                Run(() => Interpreter.Execute(program), "Run in interpreter");
+                Run(() =>
+                {
+                    Compiler compiler = new Compiler(CompilerSetting.Default);
+                    Action action = compiler.Compile(program);
+                    action();
+                }, "Run using compiler");
             }
         }
 
@@ -37,6 +43,20 @@ namespace Brainfuck.Repl
             }
 
             return sb.ToString();
+        }
+
+        private static TimeSpan Run(Action action, string message)
+        {
+            Console.WriteLine(message);
+
+            Stopwatch sw = Stopwatch.StartNew();
+            action();
+            sw.Stop();
+
+            Console.WriteLine();
+            Console.WriteLine($"Elapsed {sw.Elapsed}");
+            Console.WriteLine();
+            return sw.Elapsed;
         }
     }
 }
