@@ -121,7 +121,7 @@ namespace Brainfuck.Core
             ElementType = elementType;
         }
 
-        public static CompilerSetting Default = new CompilerSetting(DefaultBufferSize, DefaultElementType);
+        public static readonly CompilerSetting Default = new CompilerSetting(DefaultBufferSize, DefaultElementType);
 
         public CompilerSetting WithBufferSize(int bufferSize) => new CompilerSetting(bufferSize, this.ElementType);
         public CompilerSetting WithElementType(Type elementType) => new CompilerSetting(this.BufferSize, elementType);
