@@ -73,23 +73,17 @@ namespace Brainfuck.Core
                                                 Setting.ElementType)));
                         break;
                     case '[':
-                        {
-                            LabelTarget label = GetLabel(program.Dests[i]);
-                            expressions.Add(Expression.IfThen(
-                                                Expression.Equal(elem, Expression.Constant(0, Setting.ElementType)),
-                                                Expression.Goto(label)));
-                            expressions.Add(Expression.Label(GetLabel(i)));
-                            break;
-                        }
+                        expressions.Add(Expression.IfThen(
+                                            Expression.Equal(elem, Expression.Constant(0, Setting.ElementType)),
+                                            Expression.Goto(GetLabel(program.Dests[i]))));
+                        expressions.Add(Expression.Label(GetLabel(i)));
+                        break;
                     case ']':
-                        {
-                            LabelTarget label = GetLabel(program.Dests[i]);
-                            expressions.Add(Expression.IfThen(
-                                                Expression.NotEqual(elem, Expression.Constant(0, Setting.ElementType)),
-                                                Expression.Goto(label)));
-                            expressions.Add(Expression.Label(GetLabel(i)));
-                            break;
-                        }
+                        expressions.Add(Expression.IfThen(
+                                            Expression.NotEqual(elem, Expression.Constant(0, Setting.ElementType)),
+                                            Expression.Goto(GetLabel(program.Dests[i]))));
+                        expressions.Add(Expression.Label(GetLabel(i)));
+                        break;
                     default:
                         ManageUnknownChar(program.Source[i]);
                         break;
