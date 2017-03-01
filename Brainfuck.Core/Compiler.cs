@@ -20,6 +20,7 @@ namespace Brainfuck.Core
             ParameterExpression ptr = Expression.Variable(typeof(int), nameof(ptr));
             ParameterExpression buffer = Expression.Variable(Setting.ElementType.MakeArrayType(), nameof(buffer));
             IndexExpression elem = Expression.ArrayAccess(buffer, ptr);
+            ConstantExpression zero = Expression.Constant(ConvertInteger(0, Setting.ElementType), Setting.ElementType);
 
             var labels = new Dictionary<int, LabelTarget>();
             LabelTarget GetLabel(int index)
@@ -74,13 +75,13 @@ namespace Brainfuck.Core
                         break;
                     case '[':
                         expressions.Add(Expression.IfThen(
-                                            Expression.Equal(elem, Expression.Constant(0, Setting.ElementType)),
+                                            Expression.Equal(elem, zero),
                                             Expression.Goto(GetLabel(program.Dests[i]))));
                         expressions.Add(Expression.Label(GetLabel(i)));
                         break;
                     case ']':
                         expressions.Add(Expression.IfThen(
-                                            Expression.NotEqual(elem, Expression.Constant(0, Setting.ElementType)),
+                                            Expression.NotEqual(elem, zero),
                                             Expression.Goto(GetLabel(program.Dests[i]))));
                         expressions.Add(Expression.Label(GetLabel(i)));
                         break;
@@ -95,6 +96,26 @@ namespace Brainfuck.Core
         }
 
         private static void ManageUnknownChar(char value) => Console.WriteLine($"Warning : Unknown char '{value}'");
+
+        private static object ConvertInteger(int value, Type type)
+        {
+            if (type == typeof(Int16))
+            {
+                return (Int16)value;
+            }
+            else if (type == typeof(Int32))
+            {
+                return value;
+            }
+            else if (type == typeof(Int64))
+            {
+                return (Int64)value;
+            }
+            else
+            {
+                throw new InvalidOperationException($"Unsupported type '{type}'");
+            }
+        }
     }
 
     public class CompilerSetting
