@@ -47,7 +47,8 @@ namespace Brainfuck.Test
         {
             return code =>
             {
-                new Compiler(CompilerSetting.Default.WithElementType(elementType)).Compile(Parser.Parse(code));
+                var action = new Compiler(CompilerSetting.Default.WithElementType(elementType)).Compile(Parser.Parse(code));
+                action();
             };
         }
     }
