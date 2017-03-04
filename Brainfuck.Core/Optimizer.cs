@@ -6,7 +6,7 @@ namespace Brainfuck.Core
 {
     public static class Optimizer
     {
-        public static Program Optimize(Program program)
+        public static Program Optimize(this Program program)
         {
             var operations = ImmutableArray.CreateBuilder<Operation>();
             Operation? GetLast() => operations.Count > 0 ? operations.Last() : (Operation?)null;
@@ -17,6 +17,7 @@ namespace Brainfuck.Core
                 return last;
             }
 
+            // old-address -> new-address
             var map = new Dictionary<int, int>();
 
             for (int i = 0; i < program.Operations.Length; i++)
