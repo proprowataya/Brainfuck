@@ -38,10 +38,14 @@ namespace Brainfuck.Core
 
             for (int i = 0; i < program.Operations.Length; i++)
             {
-                switch (program.Operations[i].Opcode)
+                Operation operation = program.Operations[i];
+                int value = operation.Value;
+                ref T current = ref buffer[ptr];
+
+                switch (operation.Opcode)
                 {
                     case Opcode.AddPtr:
-                        ptr += program.Operations[i].Value;
+                        ptr += value;
                         if (ptr >= buffer.Length)
                         {
                             // Expand buffer
@@ -52,24 +56,24 @@ namespace Brainfuck.Core
                         }
                         break;
                     case Opcode.AddValue:
-                        buffer[ptr] = op.Add(buffer[ptr], program.Operations[i].Value);
+                        current = op.Add(current, value);
                         break;
                     case Opcode.Put:
-                        Put(op.ToChar(buffer[ptr]));
+                        Put(op.ToChar(current));
                         break;
                     case Opcode.Read:
-                        buffer[ptr] = op.FromInt(Read());
+                        current = op.FromInt(Read());
                         break;
                     case Opcode.OpeningBracket:
-                        if (op.IsZero(buffer[ptr]))
+                        if (op.IsZero(current))
                         {
-                            i = program.Operations[i].Value;
+                            i = value;
                         }
                         break;
                     case Opcode.ClosingBracket:
-                        if (op.IsNotZero(buffer[ptr]))
+                        if (op.IsNotZero(current))
                         {
-                            i = program.Operations[i].Value;
+                            i = value;
                         }
                         break;
                     case Opcode.Unknown:
