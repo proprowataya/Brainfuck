@@ -7,6 +7,7 @@ namespace Brainfuck.Test
 {
     public class ExecutionTest
     {
+        private const int DefaultBufferSize = 1;
         private static readonly Type[] TestTypes = { typeof(Int16), typeof(Int32), typeof(Int64) };
 
         [Fact]
@@ -47,11 +48,11 @@ namespace Brainfuck.Test
 
             foreach (var program in programs)
             {
-                Assert.Equal(expected, RunTest(GetInterpreterAction(), program, stdin));
-
-                foreach (var useDynamicBuffer in new[] { true, false })
+                foreach (var type in TestTypes)
                 {
-                    foreach (var type in TestTypes)
+                    Assert.Equal(expected, RunTest(GetInterpreterAction(type), program, stdin));
+
+                    foreach (var useDynamicBuffer in new[] { true, false })
                     {
                         CompilerSetting setting = CompilerSetting.Default.WithElementType(type);
                         if (useDynamicBuffer)
@@ -76,9 +77,9 @@ namespace Brainfuck.Test
             }
         }
 
-        private static Action<Program> GetInterpreterAction()
+        private static Action<Program> GetInterpreterAction(Type elementType)
         {
-            return program => Interpreter.Execute(program);
+            return program => Interpreter.Execute(program, elementType, DefaultBufferSize);
         }
 
         private static Action<Program> GetCompilerAction(CompilerSetting setting)
