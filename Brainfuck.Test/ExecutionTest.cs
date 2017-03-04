@@ -17,6 +17,14 @@ namespace Brainfuck.Test
             TestAll(Code, HelloWorld);
         }
 
+        [Fact]
+        public void HelloWorldWithErrorsTest()
+        {
+            const string HelloWorld = "Hello World!";
+            const string Code = ">++++  + + + ++111111[<1+1+1+1+1+1+1+1+1>1-1]1<1.1>1+1+1+++++[<++++>-]<+.+++++++..+++.[-]>++++++++[<++++>-]<.>+++++++++++[<+++++>-]<.>++++++++[<+++>-]<.+++.------.--------.[-]>++++++++[<++++>-]<+.[-]+++++++++11+.";
+            TestAll(Code, HelloWorld);
+        }
+
         private static void TestAll(string code, string expected)
         {
             Program[] programs = { Parser.Parse(code), Optimizer.Optimize(Parser.Parse(code)) };
