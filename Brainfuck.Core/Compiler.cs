@@ -45,7 +45,7 @@ namespace Brainfuck.Core
             expressions.Add(Expression.Assign(ptr, Expression.Constant(0, typeof(int))));
             expressions.Add(Expression.Assign(buffer, Expression.NewArrayBounds(Setting.ElementType, Expression.Constant(Setting.BufferSize))));
 
-            for (int i = 0; i < program.Source.Length; i++)
+            for (int i = 0; i < program.Operations.Length; i++)
             {
                 switch (program.Operations[i].Opcode)
                 {

@@ -16,7 +16,7 @@ namespace Brainfuck.Core
             Buffer<BufferElement> buffer = new Buffer<BufferElement>();
             int ptr = 0;
 
-            for (int i = 0; i < program.Source.Length; i++)
+            for (int i = 0; i < program.Operations.Length; i++)
             {
                 switch (program.Operations[i].Opcode)
                 {
