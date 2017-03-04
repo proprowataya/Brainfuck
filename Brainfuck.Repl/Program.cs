@@ -17,7 +17,7 @@ namespace Brainfuck.Repl
                 string source = ReadCode();
                 if (source == "exit")
                     break;
-                Brainfuck.Core.Program program = Parser.Parse(source);
+                Brainfuck.Core.Program program = Parser.Parse(source).Optimize();
 
                 Run(() => Interpreter.Execute(program), "Run in interpreter");
                 Run(() =>
