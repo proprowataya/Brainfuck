@@ -52,6 +52,7 @@ namespace Brainfuck.Core
                         }
                     default:
                         ManageUnknownChar(source[i]);
+                        operations.Add(new Operation(Opcode.Unknown));
                         break;
                 }
             }
