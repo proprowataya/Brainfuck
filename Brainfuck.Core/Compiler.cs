@@ -148,14 +148,6 @@ namespace Brainfuck.Core
 
     public class CompilerSetting
     {
-        #region Constants
-
-        internal const int DefaultBufferSize = 1 << 20;
-        internal static readonly Type DefaultElementType = typeof(int);
-        internal const bool DefaultUseDynamicBuffer = false;
-
-        #endregion
-
         public int BufferSize { get; }
         public Type ElementType { get; }
         public bool UseDynamicBuffer { get; }
@@ -167,7 +159,7 @@ namespace Brainfuck.Core
             UseDynamicBuffer = useDynamicBuffer;
         }
 
-        public static readonly CompilerSetting Default = new CompilerSetting(DefaultBufferSize, DefaultElementType, DefaultUseDynamicBuffer);
+        public static readonly CompilerSetting Default = new CompilerSetting(Defaults.BufferSize, Defaults.ElementType, Defaults.UseDynamicBuffer);
 
         public CompilerSetting WithBufferSize(int bufferSize) => new CompilerSetting(bufferSize, this.ElementType, this.UseDynamicBuffer);
         public CompilerSetting WithElementType(Type elementType) => new CompilerSetting(this.BufferSize, elementType, this.UseDynamicBuffer);
