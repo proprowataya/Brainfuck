@@ -144,8 +144,6 @@ namespace Brainfuck.Core
                 throw new InvalidOperationException($"Unsupported type '{type}'");
             }
         }
-
-        private static void ManageUnknownChar(char value) => Console.WriteLine($"Warning : Unknown char '{value}'");
     }
 
     public class CompilerSetting
