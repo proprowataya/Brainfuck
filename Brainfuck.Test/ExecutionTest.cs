@@ -19,35 +19,41 @@ namespace Brainfuck.Test
 
         private static void TestAll(string code, string expected)
         {
-            Assert.Equal(expected, RunTest(GetInterpreterAction(), code));
+            Program[] programs = { Parser.Parse(code), Optimizer.Optimize(Parser.Parse(code)) };
 
-            foreach (var type in TestTypes)
+            foreach (var program in programs)
             {
-                Assert.Equal(expected, RunTest(GetCompilerAction(type), code));
+                Assert.Equal(expected, RunTest(GetInterpreterAction(), program));
+
+                foreach (var type in TestTypes)
+                {
+                    Assert.Equal(expected, RunTest(GetCompilerAction(type), program));
+                }
             }
         }
 
-        private static string RunTest(Action<string> action, string code)
+        private static string RunTest(Action<Program> action, Program program)
         {
             using (var writer = new StringWriter())
             {
                 Console.SetOut(writer);
-                action(code);
+                action(program);
                 Console.Out.Flush();
                 return writer.ToString().TrimEnd();
             }
         }
 
-        private static Action<string> GetInterpreterAction()
+        private static Action<Program> GetInterpreterAction()
         {
-            return code => Interpreter.Execute(code);
+            return program => Interpreter.Execute(program);
         }
 
-        private static Action<string> GetCompilerAction(Type elementType)
+        private static Action<Program> GetCompilerAction(Type elementType)
         {
-            return code =>
+            return program =>
             {
-                var action = new Compiler(CompilerSetting.Default.WithElementType(elementType)).Compile(Parser.Parse(code));
+                Compiler compiler = new Compiler(CompilerSetting.Default.WithElementType(elementType));
+                Action action = compiler.Compile(program);
                 action();
             };
         }
