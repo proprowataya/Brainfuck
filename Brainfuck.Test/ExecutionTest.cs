@@ -33,6 +33,14 @@ namespace Brainfuck.Test
             TestAll(Code, InputString, InputString);
         }
 
+        [Fact]
+        public void EchoTest2()
+        {
+            const string InputString = "Test これはテストです。\0";
+            const string Code = ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>+[,.]";
+            TestAll(Code, InputString, InputString);
+        }
+
         private static void TestAll(string code, string expected, string stdin = "")
         {
             Program[] programs = { Parser.Parse(code), Optimizer.Optimize(Parser.Parse(code)) };
@@ -41,9 +49,16 @@ namespace Brainfuck.Test
             {
                 Assert.Equal(expected, RunTest(GetInterpreterAction(), program, stdin));
 
-                foreach (var type in TestTypes)
+                foreach (var useDynamicBuffer in new[] { true, false })
                 {
-                    Assert.Equal(expected, RunTest(GetCompilerAction(type), program, stdin));
+                    foreach (var type in TestTypes)
+                    {
+                        CompilerSetting setting = CompilerSetting.Default.WithElementType(type);
+                        if (useDynamicBuffer)
+                            setting = setting.WithBufferSize(1).WithUseDynamicBuffer(useDynamicBuffer);
+
+                        Assert.Equal(expected, RunTest(GetCompilerAction(setting), program, stdin));
+                    }
                 }
             }
         }
@@ -66,11 +81,11 @@ namespace Brainfuck.Test
             return program => Interpreter.Execute(program);
         }
 
-        private static Action<Program> GetCompilerAction(Type elementType)
+        private static Action<Program> GetCompilerAction(CompilerSetting setting)
         {
             return program =>
             {
-                Compiler compiler = new Compiler(CompilerSetting.Default.WithElementType(elementType));
+                Compiler compiler = new Compiler(setting);
                 Action action = compiler.Compile(program);
                 action();
             };

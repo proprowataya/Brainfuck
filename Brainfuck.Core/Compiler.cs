@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq.Expressions;
 using System.Reflection;
 
@@ -51,6 +52,10 @@ namespace Brainfuck.Core
                 {
                     case Opcode.AddPtr:
                         expressions.Add(Expression.AddAssign(ptr, Expression.Constant(program.Operations[i].Value)));
+                        if (Setting.UseDynamicBuffer && program.Operations[i].Value > 0)
+                        {
+                            AddCheckBufferCode(expressions, buffer, ptr);
+                        }
                         break;
                     case Opcode.AddValue:
                         expressions.Add(Expression.AddAssign(elem, GetConstant(program.Operations[i].Value)));
@@ -94,6 +99,32 @@ namespace Brainfuck.Core
         private ConstantExpression GetConstant(int value) =>
             Expression.Constant(ConvertInteger(value, Setting.ElementType), Setting.ElementType);
 
+        private void AddCheckBufferCode(List<Expression> expressions, ParameterExpression buffer, ParameterExpression ptr)
+        {
+            Debug.Assert(Setting.UseDynamicBuffer);
+
+            ParameterExpression temp = Expression.Variable(Setting.ElementType.MakeArrayType());
+            UnaryExpression lengthOfBuffer = Expression.ArrayLength(buffer);
+            BinaryExpression doubleOfCurrentLength = Expression.Multiply(lengthOfBuffer, Expression.Constant(2));
+            ConditionalExpression lengthOfNewBuffer = Expression.Condition(
+                                                        Expression.GreaterThan(doubleOfCurrentLength, ptr),
+                                                        doubleOfCurrentLength, Expression.Increment(ptr));
+
+            expressions.Add(Expression.IfThen(
+                                Expression.GreaterThanOrEqual(ptr, lengthOfBuffer),
+                                Expression.Block(
+                                    new[] { temp },
+                                    Expression.Assign(
+                                        temp,
+                                        Expression.NewArrayBounds(Setting.ElementType, lengthOfNewBuffer)),
+                                    Expression.Call(
+                                        typeof(Array).GetRuntimeMethod(nameof(Array.Copy), new[] { typeof(Array), typeof(Array), typeof(int) }),
+                                        buffer, temp, lengthOfBuffer),
+                                    Expression.Assign(
+                                        buffer,
+                                        temp))));
+        }
+
         private static object ConvertInteger(int value, Type type)
         {
             if (type == typeof(Int16))
@@ -123,21 +154,25 @@ namespace Brainfuck.Core
 
         internal const int DefaultBufferSize = 1 << 20;
         internal static readonly Type DefaultElementType = typeof(int);
+        internal const bool DefaultUseDynamicBuffer = false;
 
         #endregion
 
         public int BufferSize { get; }
         public Type ElementType { get; }
+        public bool UseDynamicBuffer { get; }
 
-        public CompilerSetting(int bufferSize, Type elementType)
+        public CompilerSetting(int bufferSize, Type elementType, bool useDynamicBuffer)
         {
             BufferSize = bufferSize;
             ElementType = elementType;
+            UseDynamicBuffer = useDynamicBuffer;
         }
 
-        public static readonly CompilerSetting Default = new CompilerSetting(DefaultBufferSize, DefaultElementType);
+        public static readonly CompilerSetting Default = new CompilerSetting(DefaultBufferSize, DefaultElementType, DefaultUseDynamicBuffer);
 
-        public CompilerSetting WithBufferSize(int bufferSize) => new CompilerSetting(bufferSize, this.ElementType);
-        public CompilerSetting WithElementType(Type elementType) => new CompilerSetting(this.BufferSize, elementType);
+        public CompilerSetting WithBufferSize(int bufferSize) => new CompilerSetting(bufferSize, this.ElementType, this.UseDynamicBuffer);
+        public CompilerSetting WithElementType(Type elementType) => new CompilerSetting(this.BufferSize, elementType, this.UseDynamicBuffer);
+        public CompilerSetting WithUseDynamicBuffer(bool useDynamicBuffer) => new CompilerSetting(this.BufferSize, this.ElementType, useDynamicBuffer);
     }
 }
