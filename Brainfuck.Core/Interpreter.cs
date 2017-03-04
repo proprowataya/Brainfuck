@@ -16,42 +16,37 @@ namespace Brainfuck.Core
             Buffer<BufferElement> buffer = new Buffer<BufferElement>();
             int ptr = 0;
 
-            for (int i = 0; i < program.Source.Length; i++)
+            for (int i = 0; i < program.Operations.Length; i++)
             {
-                switch (program.Source[i])
+                switch (program.Operations[i].Opcode)
                 {
-                    case '>':
-                        ptr++;
+                    case Opcode.AddPtr:
+                        ptr += program.Operations[i].Value;
                         break;
-                    case '<':
-                        ptr--;
+                    case Opcode.AddValue:
+                        buffer[ptr] += program.Operations[i].Value;
                         break;
-                    case '+':
-                        buffer[ptr]++;
-                        break;
-                    case '-':
-                        buffer[ptr]--;
-                        break;
-                    case '.':
+                    case Opcode.Put:
                         Put(buffer[ptr]);
                         break;
-                    case ',':
+                    case Opcode.Read:
                         buffer[ptr] = Read();
                         break;
-                    case '[':
+                    case Opcode.OpeningBracket:
                         if (buffer[ptr] == 0)
                         {
-                            i = program.Dests[i];
+                            i = program.Operations[i].Value;
                         }
                         break;
-                    case ']':
+                    case Opcode.ClosingBracket:
                         if (buffer[ptr] != 0)
                         {
-                            i = program.Dests[i];
+                            i = program.Operations[i].Value;
                         }
                         break;
+                    case Opcode.Unknown:
                     default:
-                        ManageUnknownChar(program.Source[i]);
+                        // Do nothing
                         break;
                 }
             }
@@ -59,6 +54,5 @@ namespace Brainfuck.Core
 
         private static BufferElement Read() => (BufferElement)Console.Read();
         private static void Put(BufferElement value) => Console.Write((char)value);
-        private static void ManageUnknownChar(char value) => Console.WriteLine($"Warning : Unknown char '{value}'");
     }
 }

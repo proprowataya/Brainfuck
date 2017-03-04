@@ -45,57 +45,54 @@ namespace Brainfuck.Core
             expressions.Add(Expression.Assign(ptr, Expression.Constant(0, typeof(int))));
             expressions.Add(Expression.Assign(buffer, Expression.NewArrayBounds(Setting.ElementType, Expression.Constant(Setting.BufferSize))));
 
-            for (int i = 0; i < program.Source.Length; i++)
+            for (int i = 0; i < program.Operations.Length; i++)
             {
-                switch (program.Source[i])
+                switch (program.Operations[i].Opcode)
                 {
-                    case '>':
-                        expressions.Add(Expression.Assign(ptr, Expression.Increment(ptr)));
+                    case Opcode.AddPtr:
+                        expressions.Add(Expression.AddAssign(ptr, Expression.Constant(program.Operations[i].Value)));
                         break;
-                    case '<':
-                        expressions.Add(Expression.Assign(ptr, Expression.Decrement(ptr)));
+                    case Opcode.AddValue:
+                        expressions.Add(Expression.AddAssign(elem, GetConstant(program.Operations[i].Value)));
                         break;
-                    case '+':
-                        expressions.Add(Expression.Assign(elem, Expression.Increment(elem)));
-                        break;
-                    case '-':
-                        expressions.Add(Expression.Assign(elem, Expression.Decrement(elem)));
-                        break;
-                    case '.':
+                    case Opcode.Put:
                         expressions.Add(Expression.Call(
                                             typeof(Console).GetRuntimeMethod(nameof(Console.Write), new[] { typeof(char) }),
                                             Expression.Convert(elem, typeof(char))));
                         break;
-                    case ',':
+                    case Opcode.Read:
                         expressions.Add(Expression.Assign(
                                             elem,
                                             Expression.Convert(
                                                 Expression.Call(typeof(Console).GetRuntimeMethod(nameof(Console.Read), Array.Empty<Type>())),
                                                 Setting.ElementType)));
                         break;
-                    case '[':
+                    case Opcode.OpeningBracket:
                         expressions.Add(Expression.IfThen(
                                             Expression.Equal(elem, zero),
-                                            Expression.Goto(GetLabel(program.Dests[i]))));
+                                            Expression.Goto(GetLabel(program.Operations[i].Value))));
                         expressions.Add(Expression.Label(GetLabel(i)));
                         break;
-                    case ']':
+                    case Opcode.ClosingBracket:
                         expressions.Add(Expression.IfThen(
                                             Expression.NotEqual(elem, zero),
-                                            Expression.Goto(GetLabel(program.Dests[i]))));
+                                            Expression.Goto(GetLabel(program.Operations[i].Value))));
                         expressions.Add(Expression.Label(GetLabel(i)));
                         break;
+                    case Opcode.Unknown:
                     default:
-                        ManageUnknownChar(program.Source[i]);
+                        // Do nothing
                         break;
                 }
             }
 
             Expression block = Expression.Block(new[] { ptr, buffer }, expressions);
-            return Expression.Lambda<Action>(block, Array.Empty<ParameterExpression>()).Compile();
+            Expression<Action> lambda = Expression.Lambda<Action>(block, Array.Empty<ParameterExpression>());
+            return lambda.Compile();
         }
 
-        private static void ManageUnknownChar(char value) => Console.WriteLine($"Warning : Unknown char '{value}'");
+        private ConstantExpression GetConstant(int value) =>
+            Expression.Constant(ConvertInteger(value, Setting.ElementType), Setting.ElementType);
 
         private static object ConvertInteger(int value, Type type)
         {
@@ -116,6 +113,8 @@ namespace Brainfuck.Core
                 throw new InvalidOperationException($"Unsupported type '{type}'");
             }
         }
+
+        private static void ManageUnknownChar(char value) => Console.WriteLine($"Warning : Unknown char '{value}'");
     }
 
     public class CompilerSetting
