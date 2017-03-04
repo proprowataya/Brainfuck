@@ -25,25 +25,35 @@ namespace Brainfuck.Test
             TestAll(Code, HelloWorld);
         }
 
-        private static void TestAll(string code, string expected)
+        [Fact]
+        public void EchoTest()
+        {
+            const string InputString = "Test これはテストです。\0";
+            const string Code = "+[,.]";
+            TestAll(Code, InputString, InputString);
+        }
+
+        private static void TestAll(string code, string expected, string stdin = "")
         {
             Program[] programs = { Parser.Parse(code), Optimizer.Optimize(Parser.Parse(code)) };
 
             foreach (var program in programs)
             {
-                Assert.Equal(expected, RunTest(GetInterpreterAction(), program));
+                Assert.Equal(expected, RunTest(GetInterpreterAction(), program, stdin));
 
                 foreach (var type in TestTypes)
                 {
-                    Assert.Equal(expected, RunTest(GetCompilerAction(type), program));
+                    Assert.Equal(expected, RunTest(GetCompilerAction(type), program, stdin));
                 }
             }
         }
 
-        private static string RunTest(Action<Program> action, Program program)
+        private static string RunTest(Action<Program> action, Program program, string stdin)
         {
+            using (var reader = new StringReader(stdin))
             using (var writer = new StringWriter())
             {
+                Console.SetIn(reader);
                 Console.SetOut(writer);
                 action(program);
                 Console.Out.Flush();

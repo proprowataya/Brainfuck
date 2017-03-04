@@ -9,6 +9,7 @@ namespace Brainfuck.Repl
     {
         static void Main(string[] args)
         {
+            Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
             Console.WriteLine("Brainfuck Interpreter on .NET Core");
             Console.WriteLine();
 
