@@ -28,11 +28,20 @@ namespace Brainfuck.Core
                     continue;
                 }
 
-                // If possible, We reduce operation
-                if (IsReducible(operation.Opcode) && GetLast()?.Opcode == operation.Opcode)
+                if (IsReducible(operation.Opcode))
                 {
-                    Operation last = RemoveLast();
-                    operation = new Operation(operation.Opcode, last.Value + operation.Value);
+                    // If possible, we reduce operation
+                    if (GetLast()?.Opcode == operation.Opcode)
+                    {
+                        Operation last = RemoveLast();
+                        operation = new Operation(operation.Opcode, last.Value + operation.Value);
+                    }
+
+                    if (operation.Value == 0)
+                    {
+                        // This operation has no effect, so we ignore it
+                        continue;
+                    }
                 }
 
                 // Update address map
