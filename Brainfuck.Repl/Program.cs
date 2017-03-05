@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Text;
 using Brainfuck.Core;
+using System.Threading;
 
 namespace Brainfuck.Repl
 {
@@ -29,9 +30,27 @@ namespace Brainfuck.Repl
 
                 Run(() =>
                 {
+                    var cts = new CancellationTokenSource();
                     Interpreter interpreter = new Interpreter(Setting.Default.WithBufferSize(1));
-                    interpreter.OnStepStart += arg => { PrintOnStepStartEventArgs(program, arg); Console.ReadKey(); };
-                    interpreter.Execute(program);
+                    interpreter.OnStepStart += arg =>
+                    {
+                        PrintOnStepStartEventArgs(program, arg);
+                        ConsoleKeyInfo key = Console.ReadKey();
+
+                        if (key.Key == ConsoleKey.Escape)
+                        {
+                            cts.Cancel();
+                        }
+                    };
+
+                    try
+                    {
+                        interpreter.Execute(program, cts.Token);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        // Do nothing
+                    }
                 }, "===== Interpreter (step execution) =====");
             }
         }

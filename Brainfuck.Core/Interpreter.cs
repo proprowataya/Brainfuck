@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Threading;
 
 namespace Brainfuck.Core
 {
@@ -14,19 +15,19 @@ namespace Brainfuck.Core
             Setting = setting;
         }
 
-        public void Execute(Program program)
+        public void Execute(Program program, CancellationToken token = default(CancellationToken))
         {
             if (Setting.ElementType == typeof(Int16))
             {
-                Execute<Int16, Int16Operator>(program, Setting.BufferSize);
+                Execute<Int16, Int16Operator>(program, Setting.BufferSize, token);
             }
             else if (Setting.ElementType == typeof(Int32))
             {
-                Execute<Int32, Int32Operator>(program, Setting.BufferSize);
+                Execute<Int32, Int32Operator>(program, Setting.BufferSize, token);
             }
             else if (Setting.ElementType == typeof(Int64))
             {
-                Execute<Int64, Int64Operator>(program, Setting.BufferSize);
+                Execute<Int64, Int64Operator>(program, Setting.BufferSize, token);
             }
             else
             {
@@ -34,7 +35,7 @@ namespace Brainfuck.Core
             }
         }
 
-        internal void Execute<T, TOperator>(Program program, int bufferSize) where TOperator : IOperator<T>
+        internal void Execute<T, TOperator>(Program program, int bufferSize, CancellationToken token) where TOperator : IOperator<T>
         {
             TOperator op = default(TOperator);
             T[] buffer = new T[bufferSize];
@@ -43,6 +44,7 @@ namespace Brainfuck.Core
 
             for (int i = 0; i < program.Operations.Length; i++, step++)
             {
+                token.ThrowIfCancellationRequested();
                 OnStepStart?.Invoke(new OnStepStartEventArgs(step, i, ptr, new ArrayView<T>(buffer)));
 
                 Operation operation = program.Operations[i];
