@@ -23,7 +23,7 @@ namespace Brainfuck.Repl
                 Run(() => Interpreter.Execute(program), "Run in interpreter");
                 Run(() =>
                 {
-                    Compiler compiler = new Compiler(CompilerSetting.Default);
+                    Compiler compiler = new Compiler(Setting.Default);
                     Action action = compiler.Compile(program);
                     action();
                 }, "Run using compiler");

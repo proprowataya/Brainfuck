@@ -54,7 +54,7 @@ namespace Brainfuck.Test
 
                     foreach (var useDynamicBuffer in new[] { true, false })
                     {
-                        CompilerSetting setting = CompilerSetting.Default.WithElementType(type);
+                        Setting setting = Setting.Default.WithElementType(type);
                         if (useDynamicBuffer)
                             setting = setting.WithBufferSize(1).WithUseDynamicBuffer(useDynamicBuffer);
 
@@ -82,7 +82,7 @@ namespace Brainfuck.Test
             return program => Interpreter.Execute(program, elementType, DefaultBufferSize);
         }
 
-        private static Action<Program> GetCompilerAction(CompilerSetting setting)
+        private static Action<Program> GetCompilerAction(Setting setting)
         {
             return program =>
             {

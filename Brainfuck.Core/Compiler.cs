@@ -8,9 +8,9 @@ namespace Brainfuck.Core
 {
     public sealed class Compiler
     {
-        public CompilerSetting Setting { get; }
+        public Setting Setting { get; }
 
-        public Compiler(CompilerSetting setting)
+        public Compiler(Setting setting)
         {
             Setting = setting;
         }
@@ -144,25 +144,5 @@ namespace Brainfuck.Core
                 throw new InvalidOperationException($"Unsupported type '{type}'");
             }
         }
-    }
-
-    public class CompilerSetting
-    {
-        public int BufferSize { get; }
-        public Type ElementType { get; }
-        public bool UseDynamicBuffer { get; }
-
-        public CompilerSetting(int bufferSize, Type elementType, bool useDynamicBuffer)
-        {
-            BufferSize = bufferSize;
-            ElementType = elementType;
-            UseDynamicBuffer = useDynamicBuffer;
-        }
-
-        public static readonly CompilerSetting Default = new CompilerSetting(Defaults.BufferSize, Defaults.ElementType, Defaults.UseDynamicBuffer);
-
-        public CompilerSetting WithBufferSize(int bufferSize) => new CompilerSetting(bufferSize, this.ElementType, this.UseDynamicBuffer);
-        public CompilerSetting WithElementType(Type elementType) => new CompilerSetting(this.BufferSize, elementType, this.UseDynamicBuffer);
-        public CompilerSetting WithUseDynamicBuffer(bool useDynamicBuffer) => new CompilerSetting(this.BufferSize, this.ElementType, useDynamicBuffer);
     }
 }
