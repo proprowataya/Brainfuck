@@ -1,10 +1,13 @@
 ﻿using System;
+using System.Collections;
+using System.Collections.Generic;
 
 namespace Brainfuck.Core
 {
     public class Interpreter
     {
         public Setting Setting { get; }
+        public event OnStepStartEventHandler OnStepStart;
 
         public Interpreter(Setting setting)
         {
@@ -31,14 +34,17 @@ namespace Brainfuck.Core
             }
         }
 
-        internal static void Execute<T, TOperator>(Program program, int bufferSize) where TOperator : IOperator<T>
+        internal void Execute<T, TOperator>(Program program, int bufferSize) where TOperator : IOperator<T>
         {
             TOperator op = default(TOperator);
             T[] buffer = new T[bufferSize];
             int ptr = 0;
+            int step = 0;
 
-            for (int i = 0; i < program.Operations.Length; i++)
+            for (int i = 0; i < program.Operations.Length; i++, step++)
             {
+                OnStepStart?.Invoke(new OnStepStartEventArgs(step, i, new ArrayView<T>(buffer)));
+
                 Operation operation = program.Operations[i];
                 int value = operation.Value;
                 ref T current = ref buffer[ptr];
@@ -89,6 +95,52 @@ namespace Brainfuck.Core
         private static void Put(char value) => Console.Write(value);
     }
 
+    #region Event Handler
+
+    public delegate void OnStepStartEventHandler(OnStepStartEventArgs args);
+
+    public sealed class OnStepStartEventArgs
+    {
+        public int Step { get; }
+        public int Index { get; }
+        public IReadOnlyList<object> Buffer { get; }
+
+        public OnStepStartEventArgs(int step, int index, IReadOnlyList<object> buffer)
+        {
+            Step = step;
+            Index = index;
+            Buffer = buffer;
+        }
+    }
+
+    internal struct ArrayView<T> : IReadOnlyList<object>
+    {
+        private readonly T[] _array;
+
+        public ArrayView(T[] array)
+        {
+            _array = array;
+        }
+
+        public int Length => _array.Length;
+        public object this[int index] => _array[index];
+        int IReadOnlyCollection<object>.Count => _array.Length;
+
+        public IEnumerator<object> GetEnumerator()
+        {
+            for (int i = 0; i < _array.Length; i++)
+            {
+                yield return _array[i];
+            }
+        }
+
+        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+    }
+
+    #endregion
+
+    #region Operator
+
     internal interface IOperator<T>
     {
         T Add(T a, int b);
@@ -124,4 +176,6 @@ namespace Brainfuck.Core
         public Int64 FromInt(int value) => (Int64)value;
         public char ToChar(Int64 value) => (char)value;
     }
+
+    #endregion
 }
