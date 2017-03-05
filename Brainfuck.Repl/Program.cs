@@ -20,7 +20,7 @@ namespace Brainfuck.Repl
                     break;
                 Brainfuck.Core.Program program = Parser.Parse(source).Optimize();
 
-                Run(() => Interpreter.Execute(program), "Run in interpreter");
+                Run(() => new Interpreter(Setting.Default).Execute(program), "Run in interpreter");
                 Run(() =>
                 {
                     Compiler compiler = new Compiler(Setting.Default);

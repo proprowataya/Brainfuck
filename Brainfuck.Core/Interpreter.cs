@@ -2,31 +2,32 @@
 
 namespace Brainfuck.Core
 {
-    public static class Interpreter
+    public class Interpreter
     {
-        public static void Execute(Program program)
-            => Execute(program, Defaults.ElementType, Defaults.BufferSize);
+        public Setting Setting { get; }
 
-        public static void Execute(Program program, Type elementType)
-            => Execute(program, elementType, Defaults.BufferSize);
-
-        public static void Execute(Program program, Type elementType, int bufferSize)
+        public Interpreter(Setting setting)
         {
-            if (elementType == typeof(Int16))
+            Setting = setting;
+        }
+
+        public void Execute(Program program)
+        {
+            if (Setting.ElementType == typeof(Int16))
             {
-                Execute<Int16, Int16Operator>(program, bufferSize);
+                Execute<Int16, Int16Operator>(program, Setting.BufferSize);
             }
-            else if (elementType == typeof(Int32))
+            else if (Setting.ElementType == typeof(Int32))
             {
-                Execute<Int32, Int32Operator>(program, bufferSize);
+                Execute<Int32, Int32Operator>(program, Setting.BufferSize);
             }
-            else if (elementType == typeof(Int64))
+            else if (Setting.ElementType == typeof(Int64))
             {
-                Execute<Int64, Int64Operator>(program, bufferSize);
+                Execute<Int64, Int64Operator>(program, Setting.BufferSize);
             }
             else
             {
-                throw new InvalidOperationException($"Unsupported type '{elementType}'");
+                throw new InvalidOperationException($"Unsupported type '{Setting.BufferSize}'");
             }
         }
 

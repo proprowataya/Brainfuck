@@ -79,7 +79,7 @@ namespace Brainfuck.Test
 
         private static Action<Program> GetInterpreterAction(Type elementType)
         {
-            return program => Interpreter.Execute(program, elementType, DefaultBufferSize);
+            return program => new Interpreter(Setting.Default.WithElementType(elementType)).Execute(program);
         }
 
         private static Action<Program> GetCompilerAction(Setting setting)
