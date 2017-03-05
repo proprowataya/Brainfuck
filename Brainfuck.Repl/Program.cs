@@ -20,13 +20,19 @@ namespace Brainfuck.Repl
                     break;
                 Brainfuck.Core.Program program = Parser.Parse(source).Optimize();
 
-                Run(() => new Interpreter(Setting.Default).Execute(program), "Run in interpreter");
                 Run(() =>
                 {
                     Compiler compiler = new Compiler(Setting.Default);
                     Action action = compiler.Compile(program);
                     action();
-                }, "Run using compiler");
+                }, "===== Compiler =====");
+
+                Run(() =>
+                {
+                    Interpreter interpreter = new Interpreter(Setting.Default.WithBufferSize(1));
+                    interpreter.OnStepStart += arg => { PrintOnStepStartEventArgs(program, arg); Console.ReadKey(); };
+                    interpreter.Execute(program);
+                }, "===== Interpreter (step execution) =====");
             }
         }
 
@@ -58,6 +64,30 @@ namespace Brainfuck.Repl
             Console.WriteLine($"Elapsed {sw.Elapsed}");
             Console.WriteLine();
             return sw.Elapsed;
+        }
+
+        private static void PrintOnStepStartEventArgs(Brainfuck.Core.Program program, OnStepStartEventArgs args)
+        {
+            Console.Write($"{args.Index,3}: {("[" + program.Operations[args.Index].ToString() + "]").PadRight(24)}");
+
+            Console.Write("Buffer = { ");
+            for (int i = 0; i < args.Buffer.Count; i++)
+            {
+                if (i > 0)
+                {
+                    Console.Write(", ");
+                }
+
+                if (i == args.Pointer)
+                {
+                    Console.BackgroundColor = ConsoleColor.White;
+                    Console.ForegroundColor = ConsoleColor.Black;
+                }
+
+                Console.Write(args.Buffer[i]);
+                Console.ResetColor();
+            }
+            Console.WriteLine(" }");
         }
     }
 }
