@@ -43,7 +43,7 @@ namespace Brainfuck.Core
 
             for (int i = 0; i < program.Operations.Length; i++, step++)
             {
-                OnStepStart?.Invoke(new OnStepStartEventArgs(step, i, new ArrayView<T>(buffer)));
+                OnStepStart?.Invoke(new OnStepStartEventArgs(step, i, ptr, new ArrayView<T>(buffer)));
 
                 Operation operation = program.Operations[i];
                 int value = operation.Value;
@@ -103,12 +103,14 @@ namespace Brainfuck.Core
     {
         public int Step { get; }
         public int Index { get; }
+        public int Pointer { get; }
         public IReadOnlyList<object> Buffer { get; }
 
-        public OnStepStartEventArgs(int step, int index, IReadOnlyList<object> buffer)
+        public OnStepStartEventArgs(int step, int index, int pointer, IReadOnlyList<object> buffer)
         {
             Step = step;
             Index = index;
+            Pointer = pointer;
             Buffer = buffer;
         }
     }
