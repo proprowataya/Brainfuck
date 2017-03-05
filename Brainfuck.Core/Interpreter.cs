@@ -19,15 +19,15 @@ namespace Brainfuck.Core
         {
             if (Setting.ElementType == typeof(Int16))
             {
-                Execute<Int16, Int16Operator>(program, Setting.BufferSize, token);
+                Execute<Int16, Int16Operator>(program, token);
             }
             else if (Setting.ElementType == typeof(Int32))
             {
-                Execute<Int32, Int32Operator>(program, Setting.BufferSize, token);
+                Execute<Int32, Int32Operator>(program, token);
             }
             else if (Setting.ElementType == typeof(Int64))
             {
-                Execute<Int64, Int64Operator>(program, Setting.BufferSize, token);
+                Execute<Int64, Int64Operator>(program, token);
             }
             else
             {
@@ -35,10 +35,10 @@ namespace Brainfuck.Core
             }
         }
 
-        internal void Execute<T, TOperator>(Program program, int bufferSize, CancellationToken token) where TOperator : IOperator<T>
+        internal void Execute<T, TOperator>(Program program, CancellationToken token) where TOperator : IOperator<T>
         {
             TOperator op = default(TOperator);
-            T[] buffer = new T[bufferSize];
+            T[] buffer = new T[Setting.BufferSize];
             int ptr = 0;
             int step = 0;
 
