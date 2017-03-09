@@ -1,7 +1,8 @@
-﻿using System;
+﻿using Brainfuck.Core;
+using System;
 using System.Diagnostics;
+using System.IO;
 using System.Text;
-using Brainfuck.Core;
 using System.Threading;
 
 namespace Brainfuck.Repl
@@ -14,12 +15,36 @@ namespace Brainfuck.Repl
             Console.WriteLine("Brainfuck Interpreter on .NET Core");
             Console.WriteLine();
 
+            CommandLineArgument command = CommandLineArgument.Parse(args);
+
+            if (command == null || command.PrintHelp)
+            {
+                PrintHelp();
+                if (command == null)
+                {
+                    Environment.Exit(-1);
+                }
+            }
+            else if (command.FileName == null)
+            {
+                Repl(command);
+            }
+            else
+            {
+                Execute(command);
+            }
+        }
+
+        private static void Repl(CommandLineArgument command)
+        {
             while (true)
             {
                 string source = ReadCode();
                 if (source == "exit")
                     break;
-                Brainfuck.Core.Program program = Parser.Parse(source).Optimize();
+                Brainfuck.Core.Program program = Parser.Parse(source);
+                if (command.Optimize)
+                    program = program.Optimize();
 
                 Run(() =>
                 {
@@ -32,16 +57,20 @@ namespace Brainfuck.Repl
                 {
                     var cts = new CancellationTokenSource();
                     Interpreter interpreter = new Interpreter(Setting.Default.WithBufferSize(1));
-                    interpreter.OnStepStart += arg =>
-                    {
-                        PrintOnStepStartEventArgs(program, arg);
-                        ConsoleKeyInfo key = Console.ReadKey();
 
-                        if (key.Key == ConsoleKey.Escape)
+                    if (command.StepExecution)
+                    {
+                        interpreter.OnStepStart += arg =>
                         {
-                            cts.Cancel();
-                        }
-                    };
+                            PrintOnStepStartEventArgs(program, arg);
+                            ConsoleKeyInfo key = Console.ReadKey();
+
+                            if (key.Key == ConsoleKey.Escape)
+                            {
+                                cts.Cancel();
+                            }
+                        };
+                    }
 
                     try
                     {
@@ -51,8 +80,50 @@ namespace Brainfuck.Repl
                     {
                         // Do nothing
                     }
-                }, "===== Interpreter (step execution) =====");
+                }, "===== Interpreter =====");
             }
+        }
+
+        private static void Execute(CommandLineArgument command)
+        {
+            string source = File.ReadAllText(command.FileName);
+            Brainfuck.Core.Program program = Parser.Parse(source);
+            if (command.Optimize)
+            {
+                program = program.Optimize();
+            }
+
+            Setting setting = Setting.Default;
+
+            if (!command.StepExecution)
+            {
+                Compiler compiler = new Compiler(setting);
+                Action action = compiler.Compile(program);
+
+                Stopwatch sw = Stopwatch.StartNew();
+                action();
+                sw.Stop();
+
+                Console.WriteLine();
+                Console.WriteLine($"Elapsed {sw.Elapsed}");
+            }
+            else
+            {
+                Interpreter interpreter = new Interpreter(setting.WithBufferSize(1));
+                interpreter.OnStepStart += arg =>
+                {
+                    PrintOnStepStartEventArgs(program, arg);
+                    Console.ReadKey();
+                };
+
+                interpreter.Execute(program);
+            }
+        }
+
+        private static void PrintHelp()
+        {
+            Console.WriteLine("Usage:");
+            Console.WriteLine("  Unavailable");
         }
 
         private static string ReadCode()
@@ -107,6 +178,50 @@ namespace Brainfuck.Repl
                 Console.ResetColor();
             }
             Console.WriteLine(" }");
+        }
+
+        private class CommandLineArgument
+        {
+            public string FileName { get; set; } = null;
+            public bool Optimize { get; set; } = false;
+            public bool PrintHelp { get; set; } = false;
+            public bool StepExecution { get; set; } = false;
+
+            public static CommandLineArgument Parse(string[] args)
+            {
+                CommandLineArgument result = new CommandLineArgument();
+
+                foreach (var arg in args)
+                {
+                    if (arg.StartsWith("-"))
+                    {
+                        switch (arg)
+                        {
+                            case "-o":
+                            case "--optimize":
+                                result.Optimize = true;
+                                break;
+                            case "-h":
+                            case "--help":
+                                result.PrintHelp = true;
+                                break;
+                            case "-s":
+                            case "--step":
+                                result.StepExecution = true;
+                                break;
+                            default:
+                                Console.WriteLine($"Error: Unknown command '{arg}'");
+                                return null;
+                        }
+                    }
+                    else
+                    {
+                        result.FileName = arg;
+                    }
+                }
+
+                return result;
+            }
         }
     }
 }
