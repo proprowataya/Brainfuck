@@ -19,9 +19,9 @@ namespace Brainfuck.Core
         {
             // Variables and local function
             ParameterExpression ptr = Expression.Variable(typeof(int), nameof(ptr));
-            ParameterExpression buffer = Expression.Variable(Setting.ElementType.MakeArrayType(), nameof(buffer));
+            ParameterExpression buffer = Expression.Variable(InternalElementType.MakeArrayType(), nameof(buffer));
             IndexExpression elem = Expression.ArrayAccess(buffer, ptr);
-            ConstantExpression zero = Expression.Constant(ConvertInteger(0, Setting.ElementType), Setting.ElementType);
+            ConstantExpression zero = Expression.Constant(ConvertInteger(0, InternalElementType), InternalElementType);
 
             var labels = new Dictionary<int, LabelTarget>();
             LabelTarget GetLabel(int index)
@@ -44,7 +44,7 @@ namespace Brainfuck.Core
 
             // Initialize variables
             expressions.Add(Expression.Assign(ptr, Expression.Constant(0, typeof(int))));
-            expressions.Add(Expression.Assign(buffer, Expression.NewArrayBounds(Setting.ElementType, Expression.Constant(Setting.BufferSize))));
+            expressions.Add(Expression.Assign(buffer, Expression.NewArrayBounds(InternalElementType, Expression.Constant(Setting.BufferSize))));
 
             for (int i = 0; i < program.Operations.Length; i++)
             {
@@ -70,7 +70,7 @@ namespace Brainfuck.Core
                                             elem,
                                             Expression.Convert(
                                                 Expression.Call(typeof(Console).GetRuntimeMethod(nameof(Console.Read), Array.Empty<Type>())),
-                                                Setting.ElementType)));
+                                                InternalElementType)));
                         break;
                     case Opcode.OpeningBracket:
                         expressions.Add(Expression.IfThen(
@@ -97,13 +97,13 @@ namespace Brainfuck.Core
         }
 
         private ConstantExpression GetConstant(int value) =>
-            Expression.Constant(ConvertInteger(value, Setting.ElementType), Setting.ElementType);
+            Expression.Constant(ConvertInteger(value, InternalElementType), InternalElementType);
 
         private void AddCheckBufferCode(List<Expression> expressions, ParameterExpression buffer, ParameterExpression ptr)
         {
             Debug.Assert(Setting.UseDynamicBuffer);
 
-            ParameterExpression temp = Expression.Variable(Setting.ElementType.MakeArrayType());
+            ParameterExpression temp = Expression.Variable(InternalElementType.MakeArrayType());
             UnaryExpression lengthOfBuffer = Expression.ArrayLength(buffer);
             BinaryExpression doubleOfCurrentLength = Expression.Multiply(lengthOfBuffer, Expression.Constant(2));
             ConditionalExpression lengthOfNewBuffer = Expression.Condition(
@@ -116,7 +116,7 @@ namespace Brainfuck.Core
                                     new[] { temp },
                                     Expression.Assign(
                                         temp,
-                                        Expression.NewArrayBounds(Setting.ElementType, lengthOfNewBuffer)),
+                                        Expression.NewArrayBounds(InternalElementType, lengthOfNewBuffer)),
                                     Expression.Call(
                                         typeof(Array).GetRuntimeMethod(nameof(Array.Copy), new[] { typeof(Array), typeof(Array), typeof(int) }),
                                         buffer, temp, lengthOfBuffer),
@@ -125,9 +125,16 @@ namespace Brainfuck.Core
                                         temp))));
         }
 
+        private Type InternalElementType =>
+            Setting.ElementType == typeof(Byte) ? typeof(UInt8) : Setting.ElementType;
+
         private static object ConvertInteger(int value, Type type)
         {
-            if (type == typeof(Int16))
+            if (type == typeof(UInt8))
+            {
+                return (UInt8)value;
+            }
+            else if (type == typeof(Int16))
             {
                 return (Int16)value;
             }

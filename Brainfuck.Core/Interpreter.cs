@@ -17,7 +17,11 @@ namespace Brainfuck.Core
 
         public void Execute(Program program, CancellationToken token = default(CancellationToken))
         {
-            if (Setting.ElementType == typeof(Int16))
+            if (Setting.ElementType == typeof(Byte))
+            {
+                Execute<UInt8, UInt8Operator>(program, token);
+            }
+            else if (Setting.ElementType == typeof(Int16))
             {
                 Execute<Int16, Int16Operator>(program, token);
             }
@@ -152,6 +156,15 @@ namespace Brainfuck.Core
         bool IsNotZero(T value);
         T FromInt(int value);
         char ToChar(T value);
+    }
+
+    internal struct UInt8Operator : IOperator<UInt8>
+    {
+        public UInt8 Add(UInt8 a, int b) => new UInt8((byte)(a.Value + b));
+        public bool IsZero(UInt8 value) => value == 0;
+        public bool IsNotZero(UInt8 value) => value != 0;
+        public UInt8 FromInt(int value) => (UInt8)value;
+        public char ToChar(UInt8 value) => (char)value;
     }
 
     internal struct Int16Operator : IOperator<Int16>

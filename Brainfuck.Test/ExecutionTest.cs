@@ -8,7 +8,7 @@ namespace Brainfuck.Test
     public class ExecutionTest
     {
         private const int DefaultBufferSize = 1;
-        private static readonly Type[] TestTypes = { typeof(Int16), typeof(Int32), typeof(Int64) };
+        private static readonly Type[] TestTypes = { typeof(Byte), typeof(Int16), typeof(Int32), typeof(Int64) };
 
         [Fact]
         public void HelloWorldTest()
@@ -29,7 +29,7 @@ namespace Brainfuck.Test
         [Fact]
         public void EchoTest()
         {
-            const string InputString = "Test これはテストです。\0";
+            const string InputString = "This is a test string.\0";
             const string Code = "+[,.]";
             TestAll(Code, InputString, InputString);
         }
@@ -37,7 +37,7 @@ namespace Brainfuck.Test
         [Fact]
         public void EchoTest2()
         {
-            const string InputString = "Test これはテストです。\0";
+            const string InputString = "This is a test string.\0";
             const string Code = ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>+[,.]";
             TestAll(Code, InputString, InputString);
         }
