@@ -66,6 +66,7 @@ namespace Brainfuck.Core
             return new Program(source, operations.MoveToImmutable());
         }
 
-        private static void ManageUnknownChar(char value) => Console.WriteLine($"Warning : Unknown char '{value}'");
+        private static void ManageUnknownChar(char value) { /* Do nothing */ }
+        //private static void ManageUnknownChar(char value) => Console.WriteLine($"Warning : Unknown char '{value}'");
     }
 }
