@@ -52,13 +52,14 @@ namespace Brainfuck.Test
                 {
                     Assert.Equal(expected, RunTest(GetInterpreterAction(type), program, stdin));
 
-                    foreach (var useDynamicBuffer in new[] { true, false })
+                    foreach (var useDynamicBuffer in new[] { /* true, */ false })
                     {
                         Setting setting = Setting.Default.WithElementType(type);
                         if (useDynamicBuffer)
                             setting = setting.WithBufferSize(1).WithUseDynamicBuffer(useDynamicBuffer);
 
                         Assert.Equal(expected, RunTest(GetCompilerAction(setting), program, stdin));
+                        Assert.Equal(expected, RunTest(GetILCompilerAction(setting), program, stdin));
                     }
                 }
             }
@@ -87,6 +88,16 @@ namespace Brainfuck.Test
             return program =>
             {
                 Compiler compiler = new Compiler(setting);
+                Action action = compiler.Compile(program);
+                action();
+            };
+        }
+
+        private static Action<Program> GetILCompilerAction(Setting setting)
+        {
+            return program =>
+            {
+                ILCompiler compiler = new ILCompiler(setting);
                 Action action = compiler.Compile(program);
                 action();
             };
