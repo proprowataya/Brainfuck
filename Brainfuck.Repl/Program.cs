@@ -53,14 +53,14 @@ namespace Brainfuck.Repl
                     ILCompiler compiler = new ILCompiler(setting);
                     Action action = compiler.Compile(program);
                     action();
-                }, "===== IL Compiler =====");
+                }, "===== Compiler (System.Reflection.Emit) =====");
 
                 Run(() =>
                 {
                     Compiler compiler = new Compiler(setting);
                     Action action = compiler.Compile(program);
                     action();
-                }, "===== Compiler =====");
+                }, "===== Compiler (System.Linq.Expressions) =====");
 
                 Run(() =>
                 {
@@ -106,7 +106,7 @@ namespace Brainfuck.Repl
 
             if (!command.StepExecution)
             {
-                Compiler compiler = new Compiler(setting);
+                ILCompiler compiler = new ILCompiler(setting);
                 Action action = compiler.Compile(program);
 
                 Stopwatch sw = Stopwatch.StartNew();
@@ -191,14 +191,20 @@ namespace Brainfuck.Repl
 
         private class CommandLineArgument
         {
-            public string FileName { get; set; } = null;
-            public bool Optimize { get; set; } = false;
-            public bool PrintHelp { get; set; } = false;
-            public bool StepExecution { get; set; } = false;
+            public string FileName { get; } = null;
+            public bool Optimize { get; } = true;
+            public bool PrintHelp { get; } = false;
+            public bool StepExecution { get; } = false;
 
             public static CommandLineArgument Parse(string[] args)
             {
-                CommandLineArgument result = new CommandLineArgument();
+                CommandLineArgument result = new CommandLineArgument(args, out bool success);
+                return success ? result : null;
+            }
+
+            private CommandLineArgument(string[] args, out bool success)
+            {
+                success = true;
 
                 foreach (var arg in args)
                 {
@@ -206,30 +212,29 @@ namespace Brainfuck.Repl
                     {
                         switch (arg)
                         {
-                            case "-o":
-                            case "--optimize":
-                                result.Optimize = true;
+                            case "-od":
+                            case "--optimize=disable":
+                                Optimize = false;
                                 break;
                             case "-h":
                             case "--help":
-                                result.PrintHelp = true;
+                                PrintHelp = true;
                                 break;
                             case "-s":
                             case "--step":
-                                result.StepExecution = true;
+                                StepExecution = true;
                                 break;
                             default:
                                 Console.WriteLine($"Error: Unknown command '{arg}'");
-                                return null;
+                                success = false;
+                                break;
                         }
                     }
                     else
                     {
-                        result.FileName = arg;
+                        FileName = arg;
                     }
                 }
-
-                return result;
             }
         }
     }
