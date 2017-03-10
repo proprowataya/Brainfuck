@@ -32,8 +32,12 @@ namespace Brainfuck.Core
         AddValue,
         Put,
         Read,
+
+        /* Jump */
+        BrZero,
         OpeningBracket,
         ClosingBracket,
+
         MultAdd,
         Assign,
         Unknown,

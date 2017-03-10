@@ -105,6 +105,11 @@ namespace Brainfuck.Core
                 return false;
             }
 
+            // Generate optimized code
+
+            // if (buffer[ptr] == 0) { goto `]`; }
+            AddCreatedOperation(new Operation(Opcode.BrZero, endIndex));
+
             foreach (var p in deltas.Where(p => p.Key != 0))
             {
                 // buffer[ptr + p.Key] += buffer[ptr] * p.Value
@@ -113,6 +118,9 @@ namespace Brainfuck.Core
 
             // buffer[ptr] = 0
             AddCreatedOperation(new Operation(Opcode.Assign, 0, 0));
+
+            // We have to update address map manually
+            map.Add(endIndex, operations.Count - 1);
 
             return true;
         }
@@ -134,6 +142,7 @@ namespace Brainfuck.Core
             {
                 switch (operations[i].Opcode)
                 {
+                    case Opcode.BrZero:
                     case Opcode.OpeningBracket:
                     case Opcode.ClosingBracket:
                         operations[i] = new Operation(operations[i].Opcode, map[operations[i].Value]);

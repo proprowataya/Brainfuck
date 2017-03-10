@@ -73,6 +73,7 @@ namespace Brainfuck.Core
                     case Opcode.Read:
                         current = op.FromInt(Read());
                         break;
+                    case Opcode.BrZero:
                     case Opcode.OpeningBracket:
                         if (op.IsZero(current))
                         {
