@@ -37,6 +37,8 @@ namespace Brainfuck.Repl
 
         private static void Repl(CommandLineArgument command)
         {
+            Setting setting = Setting.Default;
+
             while (true)
             {
                 string source = ReadCode();
@@ -48,7 +50,14 @@ namespace Brainfuck.Repl
 
                 Run(() =>
                 {
-                    Compiler compiler = new Compiler(Setting.Default);
+                    ILCompiler compiler = new ILCompiler(setting);
+                    Action action = compiler.Compile(program);
+                    action();
+                }, "===== IL Compiler =====");
+
+                Run(() =>
+                {
+                    Compiler compiler = new Compiler(setting);
                     Action action = compiler.Compile(program);
                     action();
                 }, "===== Compiler =====");
@@ -56,7 +65,7 @@ namespace Brainfuck.Repl
                 Run(() =>
                 {
                     var cts = new CancellationTokenSource();
-                    Interpreter interpreter = new Interpreter(Setting.Default.WithBufferSize(1));
+                    Interpreter interpreter = new Interpreter(setting.WithBufferSize(1));
 
                     if (command.StepExecution)
                     {
