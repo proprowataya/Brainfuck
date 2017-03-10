@@ -6,20 +6,28 @@ namespace Brainfuck.Core
 {
     public static class Optimizer
     {
-        public static Program Optimize(this Program program)
+        public static Program Optimize(this Program program) => new OptimizerImplement(program).Optimize();
+    }
+
+    internal struct OptimizerImplement
+    {
+        #region Fields
+
+        private readonly Program program;
+        private readonly ImmutableArray<Operation>.Builder operations;
+        private readonly Dictionary<int, int> map;
+
+        #endregion
+
+        public OptimizerImplement(Program program)
         {
-            var operations = ImmutableArray.CreateBuilder<Operation>();
-            Operation? GetLast() => operations.Count > 0 ? operations.Last() : (Operation?)null;
-            Operation RemoveLast()
-            {
-                Operation last = operations.Last();
-                operations.RemoveAt(operations.Count - 1);
-                return last;
-            }
+            this.program = program;
+            this.operations = ImmutableArray.CreateBuilder<Operation>();
+            this.map = new Dictionary<int, int>();
+        }
 
-            // old-address -> new-address
-            var map = new Dictionary<int, int>();
-
+        public Program Optimize()
+        {
             for (int i = 0; i < program.Operations.Length; i++)
             {
                 Operation operation = program.Operations[i];
@@ -63,6 +71,14 @@ namespace Brainfuck.Core
             }
 
             return new Program(program.Source, operations.ToImmutable());
+        }
+
+        private Operation? GetLast() => operations.Count > 0 ? operations.Last() : (Operation?)null;
+        private Operation RemoveLast()
+        {
+            Operation last = operations.Last();
+            operations.RemoveAt(operations.Count - 1);
+            return last;
         }
 
         private static bool IsReducible(Opcode opcode)
