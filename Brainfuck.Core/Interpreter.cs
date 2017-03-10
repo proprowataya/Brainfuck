@@ -61,11 +61,7 @@ namespace Brainfuck.Core
                         ptr += value;
                         if (ptr >= buffer.Length)
                         {
-                            // Expand buffer
-                            int newSize = Math.Max(buffer.Length * 2, ptr + 1);
-                            T[] newBuffer = new T[newSize];
-                            Array.Copy(buffer, newBuffer, buffer.Length);
-                            buffer = newBuffer;
+                            buffer = ExpandBuffer(buffer, ptr + 1);
                         }
                         break;
                     case Opcode.AddValue:
@@ -77,6 +73,7 @@ namespace Brainfuck.Core
                     case Opcode.Read:
                         current = op.FromInt(Read());
                         break;
+                    case Opcode.BrZero:
                     case Opcode.OpeningBracket:
                         if (op.IsZero(current))
                         {
@@ -89,12 +86,41 @@ namespace Brainfuck.Core
                             i = value;
                         }
                         break;
+                    case Opcode.MultAdd:
+                        {
+                            if (ptr + operation.Value >= buffer.Length)
+                            {
+                                buffer = ExpandBuffer(buffer, ptr + operation.Value + 1);
+                            }
+                            ref T dest = ref buffer[ptr + operation.Value];
+                            dest = op.Add(dest, op.Mult(current, operation.Value2));
+                        }
+                        break;
+                    case Opcode.Assign:
+                        {
+                            if (ptr + operation.Value >= buffer.Length)
+                            {
+                                buffer = ExpandBuffer(buffer, ptr + operation.Value + 1);
+                            }
+                            ref T dest = ref buffer[ptr + operation.Value];
+                            dest = op.FromInt(operation.Value2);
+                        }
+                        break;
                     case Opcode.Unknown:
                     default:
                         // Do nothing
                         break;
                 }
             }
+        }
+
+        private static T[] ExpandBuffer<T>(T[] buffer, int minLength)
+        {
+            int newSize = Math.Max(buffer.Length * 2, minLength);
+            T[] newBuffer = new T[newSize];
+            Array.Copy(buffer, newBuffer, buffer.Length);
+            buffer = newBuffer;
+            return buffer;
         }
 
         private static int Read() => Console.Read();
@@ -152,6 +178,8 @@ namespace Brainfuck.Core
     internal interface IOperator<T>
     {
         T Add(T a, int b);
+        T Add(T a, T b);
+        T Mult(T a, int b);
         bool IsZero(T value);
         bool IsNotZero(T value);
         T FromInt(int value);
@@ -161,6 +189,8 @@ namespace Brainfuck.Core
     internal struct UInt8Operator : IOperator<UInt8>
     {
         public UInt8 Add(UInt8 a, int b) => new UInt8((byte)(a.Value + b));
+        public UInt8 Add(UInt8 a, UInt8 b) => (UInt8)(a + b);
+        public UInt8 Mult(UInt8 a, int b) => (UInt8)(a.Value * b);
         public bool IsZero(UInt8 value) => value == 0;
         public bool IsNotZero(UInt8 value) => value != 0;
         public UInt8 FromInt(int value) => (UInt8)value;
@@ -170,6 +200,8 @@ namespace Brainfuck.Core
     internal struct Int16Operator : IOperator<Int16>
     {
         public Int16 Add(Int16 a, int b) => (Int16)(a + b);
+        public Int16 Add(Int16 a, Int16 b) => (Int16)(a + b);
+        public Int16 Mult(Int16 a, int b) => (Int16)(a * b);
         public bool IsZero(Int16 value) => value == 0;
         public bool IsNotZero(Int16 value) => value != 0;
         public Int16 FromInt(int value) => (Int16)value;
@@ -179,6 +211,7 @@ namespace Brainfuck.Core
     internal struct Int32Operator : IOperator<Int32>
     {
         public Int32 Add(Int32 a, int b) => (Int32)(a + b);
+        public Int32 Mult(Int32 a, int b) => (Int32)(a * b);
         public bool IsZero(Int32 value) => value == 0;
         public bool IsNotZero(Int32 value) => value != 0;
         public Int32 FromInt(int value) => (Int32)value;
@@ -188,6 +221,8 @@ namespace Brainfuck.Core
     internal struct Int64Operator : IOperator<Int64>
     {
         public Int64 Add(Int64 a, int b) => (Int64)(a + b);
+        public Int64 Add(Int64 a, Int64 b) => (Int64)(a + b);
+        public Int64 Mult(Int64 a, int b) => (Int64)(a * b);
         public bool IsZero(Int64 value) => value == 0;
         public bool IsNotZero(Int64 value) => value != 0;
         public Int64 FromInt(int value) => (Int64)value;

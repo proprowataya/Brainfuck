@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 
@@ -23,20 +24,10 @@ namespace Brainfuck.Core
             IndexExpression elem = Expression.ArrayAccess(buffer, ptr);
             ConstantExpression zero = Expression.Constant(ConvertInteger(0, InternalElementType), InternalElementType);
 
-            var labels = new Dictionary<int, LabelTarget>();
-            LabelTarget GetLabel(int index)
-            {
-                if (labels.TryGetValue(index, out var label))
-                {
-                    return label;
-                }
-                else
-                {
-                    label = Expression.Label();
-                    labels.Add(index, label);
-                    return label;
-                }
-            }
+            // Labels
+            HashSet<int> labeledAddresses = GetLabeledAddresses(program);
+            Dictionary<int, LabelTarget> labels =
+                labeledAddresses.ToDictionary(address => address, address => Expression.Label($"Label {address}"));
 
             // Generate execution code
 
@@ -72,22 +63,40 @@ namespace Brainfuck.Core
                                                 Expression.Call(typeof(Console).GetRuntimeMethod(nameof(Console.Read), Array.Empty<Type>())),
                                                 InternalElementType)));
                         break;
+                    case Opcode.BrZero:
                     case Opcode.OpeningBracket:
                         expressions.Add(Expression.IfThen(
                                             Expression.Equal(elem, zero),
-                                            Expression.Goto(GetLabel(program.Operations[i].Value))));
-                        expressions.Add(Expression.Label(GetLabel(i)));
+                                            Expression.Goto(labels[program.Operations[i].Value])));
                         break;
                     case Opcode.ClosingBracket:
                         expressions.Add(Expression.IfThen(
                                             Expression.NotEqual(elem, zero),
-                                            Expression.Goto(GetLabel(program.Operations[i].Value))));
-                        expressions.Add(Expression.Label(GetLabel(i)));
+                                            Expression.Goto(labels[program.Operations[i].Value])));
+                        break;
+                    case Opcode.MultAdd:
+                        expressions.Add(Expression.AddAssign(
+                                            Expression.ArrayAccess(
+                                                buffer, Expression.Add(ptr, Expression.Constant(program.Operations[i].Value))),
+                                            Expression.Multiply(
+                                                elem, GetConstant(program.Operations[i].Value2))));
+                        break;
+                    case Opcode.Assign:
+                        expressions.Add(Expression.Assign(
+                                            Expression.ArrayAccess(
+                                                buffer, Expression.Add(ptr, Expression.Constant(program.Operations[i].Value))),
+                                            GetConstant(program.Operations[i].Value2)));
                         break;
                     case Opcode.Unknown:
                     default:
                         // Do nothing
                         break;
+                }
+
+                // If necessary, we generate label
+                if (labeledAddresses.Contains(i))
+                {
+                    expressions.Add(Expression.Label(labels[i]));
                 }
             }
 
@@ -123,6 +132,25 @@ namespace Brainfuck.Core
                                     Expression.Assign(
                                         buffer,
                                         temp))));
+        }
+
+        private HashSet<int> GetLabeledAddresses(Program program)
+        {
+            var set = new HashSet<int>();
+
+            for (int i = 0; i < program.Operations.Length; i++)
+            {
+                switch (program.Operations[i].Opcode)
+                {
+                    case Opcode.BrZero:
+                    case Opcode.OpeningBracket:
+                    case Opcode.ClosingBracket:
+                        set.Add(program.Operations[i].Value);
+                        break;
+                }
+            }
+
+            return set;
         }
 
         private Type InternalElementType =>
