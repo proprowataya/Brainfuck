@@ -28,18 +28,21 @@ namespace Brainfuck.Core
 
     public enum Opcode
     {
+        /* Basic */
         AddPtr,
         AddValue,
-        Put,
-        Read,
+        MultAdd,
+        Assign,
 
         /* Jump */
         BrZero,
         OpeningBracket,
         ClosingBracket,
 
-        MultAdd,
-        Assign,
+        /* IO */
+        Put,
+        Read,
+
         Unknown,
     }
 }
