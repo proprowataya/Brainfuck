@@ -26,6 +26,9 @@ namespace Brainfuck.Core
         public static UInt8 operator +(UInt8 x, UInt8 y) => new UInt8((byte)(x.Value + y.Value));
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static UInt8 operator *(UInt8 x, UInt8 y) => new UInt8((byte)(x.Value * y.Value));
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool operator ==(UInt8 x, UInt8 y) => x.Value == y.Value;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

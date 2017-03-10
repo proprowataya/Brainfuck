@@ -8,17 +8,22 @@ namespace Brainfuck.Core
     {
         public Opcode Opcode { get; }
         public int Value { get; }
+        public int Value2 { get; }
 
         internal Operation(Opcode opcode) : this(opcode, 0)
         { }
 
-        internal Operation(Opcode opcode, int value)
+        internal Operation(Opcode opcode, int value) : this(opcode, value, 0)
+        { }
+
+        internal Operation(Opcode opcode, int value, int value2)
         {
             Opcode = opcode;
             Value = value;
+            Value2 = value2;
         }
 
-        public override string ToString() => $"{Opcode}, {Value}";
+        public override string ToString() => $"{Opcode}, {Value}, {Value2}";
     }
 
     public enum Opcode
@@ -29,6 +34,8 @@ namespace Brainfuck.Core
         Read,
         OpeningBracket,
         ClosingBracket,
+        MultAdd,
+        Assign,
         Unknown,
     }
 }

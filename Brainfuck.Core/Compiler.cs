@@ -84,6 +84,19 @@ namespace Brainfuck.Core
                                             Expression.Goto(GetLabel(program.Operations[i].Value))));
                         expressions.Add(Expression.Label(GetLabel(i)));
                         break;
+                    case Opcode.MultAdd:
+                        expressions.Add(Expression.AddAssign(
+                                            Expression.ArrayAccess(
+                                                buffer, Expression.Add(ptr, Expression.Constant(program.Operations[i].Value))),
+                                            Expression.Multiply(
+                                                elem, GetConstant(program.Operations[i].Value2))));
+                        break;
+                    case Opcode.Assign:
+                        expressions.Add(Expression.Assign(
+                                            Expression.ArrayAccess(
+                                                buffer, Expression.Add(ptr, Expression.Constant(program.Operations[i].Value))),
+                                            GetConstant(program.Operations[i].Value2)));
+                        break;
                     case Opcode.Unknown:
                     default:
                         // Do nothing
