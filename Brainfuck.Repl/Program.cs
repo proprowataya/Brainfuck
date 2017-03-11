@@ -2,6 +2,7 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading;
 
@@ -15,11 +16,11 @@ namespace Brainfuck.Repl
             Console.WriteLine("Brainfuck Interpreter on .NET Core");
             Console.WriteLine();
 
-            CommandLineArgument command = CommandLineArgument.Parse(args);
+            CommandLineArgument command = CommandLineArgument.Parse(args, out var setting);
 
-            if (command == null || command.PrintHelp)
+            if (command == null || command.Help)
             {
-                PrintHelp();
+                CommandLineArgument.PrintHelp();
                 if (command == null)
                 {
                     Environment.Exit(-1);
@@ -27,113 +28,118 @@ namespace Brainfuck.Repl
             }
             else if (command.FileName == null)
             {
-                Repl(command);
+                Repl(command, setting);
             }
             else
             {
-                Execute(command);
+                Execute(command, setting);
             }
         }
 
-        private static void Repl(CommandLineArgument command)
+        private static void Repl(CommandLineArgument command, Setting setting)
         {
-            Setting setting = Setting.Default;
-
-            while (true)
+            while (ReadCode() is string source && source != "exit")
             {
-                string source = ReadCode();
-                if (source == "exit")
-                    break;
-                Brainfuck.Core.Program program = Parser.Parse(source);
-                if (command.Optimize)
-                    program = program.Optimize();
+                Brainfuck.Core.Program program = ParseSource(source, command.Optimize);
 
-                Run(() =>
-                {
-                    ILCompiler compiler = new ILCompiler(setting);
-                    Action action = compiler.Compile(program);
-                    action();
-                }, "===== Compiler (System.Reflection.Emit) =====");
-
-                Run(() =>
-                {
-                    Compiler compiler = new Compiler(setting);
-                    Action action = compiler.Compile(program);
-                    action();
-                }, "===== Compiler (System.Linq.Expressions) =====");
-
-                Run(() =>
-                {
-                    var cts = new CancellationTokenSource();
-                    Interpreter interpreter = new Interpreter(setting.WithBufferSize(1));
-
-                    if (command.StepExecution)
-                    {
-                        interpreter.OnStepStart += arg =>
-                        {
-                            PrintOnStepStartEventArgs(program, arg);
-                            ConsoleKeyInfo key = Console.ReadKey();
-
-                            if (key.Key == ConsoleKey.Escape)
-                            {
-                                cts.Cancel();
-                            }
-                        };
-                    }
-
-                    try
-                    {
-                        interpreter.Execute(program, cts.Token);
-                    }
-                    catch (OperationCanceledException)
-                    {
-                        // Do nothing
-                    }
-                }, "===== Interpreter =====");
+                RunByILCompiler(program, setting, printHeader: true);
+                RunByExpressionCompiler(program, setting, printHeader: true);
+                RunByInterpreter(program, setting, printHeader: true, stepExecution: command.StepExecution);
             }
         }
 
-        private static void Execute(CommandLineArgument command)
+        private static void Execute(CommandLineArgument command, Setting setting)
         {
             string source = File.ReadAllText(command.FileName);
-            Brainfuck.Core.Program program = Parser.Parse(source);
-            if (command.Optimize)
+            Brainfuck.Core.Program program = ParseSource(source, command.Optimize);
+
+            if (command.StepExecution)
             {
-                program = program.Optimize();
+                RunByInterpreter(program, setting, printHeader: false, stepExecution: true);
             }
+            else
+            {
+                RunByILCompiler(program, setting, printHeader: false);
+            }
+        }
 
-            Setting setting = Setting.Default;
+        #region Runs
 
-            if (!command.StepExecution)
+        private static void RunByILCompiler(Brainfuck.Core.Program program, Setting setting, bool printHeader)
+        {
+            Run(() =>
             {
                 ILCompiler compiler = new ILCompiler(setting);
                 Action action = compiler.Compile(program);
-
-                Stopwatch sw = Stopwatch.StartNew();
                 action();
-                sw.Stop();
-
-                Console.WriteLine();
-                Console.WriteLine($"Elapsed {sw.Elapsed}");
-            }
-            else
-            {
-                Interpreter interpreter = new Interpreter(setting.WithBufferSize(1));
-                interpreter.OnStepStart += arg =>
-                {
-                    PrintOnStepStartEventArgs(program, arg);
-                    Console.ReadKey();
-                };
-
-                interpreter.Execute(program);
-            }
+            }, printHeader ? "===== Compiler (System.Reflection.Emit) =====" : null);
         }
 
-        private static void PrintHelp()
+        private static void RunByExpressionCompiler(Brainfuck.Core.Program program, Setting setting, bool printHeader)
         {
-            Console.WriteLine("Usage:");
-            Console.WriteLine("  Unavailable");
+            Run(() =>
+            {
+                Compiler compiler = new Compiler(setting);
+                Action action = compiler.Compile(program);
+                action();
+            }, printHeader ? "===== Compiler (System.Linq.Expressions) =====" : null);
         }
+
+        private static void RunByInterpreter(Brainfuck.Core.Program program, Setting setting, bool printHeader, bool stepExecution)
+        {
+            Run(() =>
+            {
+                if (stepExecution)
+                {
+                    setting = setting.WithBufferSize(1);
+                }
+
+                var cts = new CancellationTokenSource();
+                Interpreter interpreter = new Interpreter(setting);
+
+                if (stepExecution)
+                {
+                    interpreter.OnStepStart += arg =>
+                    {
+                        PrintOnStepStartEventArgs(program, arg);
+                        ConsoleKeyInfo key = Console.ReadKey();
+
+                        if (key.Key == ConsoleKey.Escape)
+                        {
+                            cts.Cancel();
+                        }
+                    };
+                }
+
+                try
+                {
+                    interpreter.Execute(program, cts.Token);
+                }
+                catch (OperationCanceledException)
+                {
+                    // Do nothing
+                }
+            }, printHeader ? "===== Interpreter =====" : null);
+        }
+
+        private static TimeSpan Run(Action action, string message)
+        {
+            if (message != null)
+            {
+                Console.WriteLine(message);
+            }
+
+            Stopwatch sw = Stopwatch.StartNew();
+            action();
+            sw.Stop();
+
+            Console.WriteLine();
+            Console.WriteLine($"Elapsed {sw.Elapsed}");
+            Console.WriteLine();
+            return sw.Elapsed;
+        }
+
+        #endregion
 
         private static string ReadCode()
         {
@@ -151,18 +157,15 @@ namespace Brainfuck.Repl
             return sb.ToString();
         }
 
-        private static TimeSpan Run(Action action, string message)
+        private static Brainfuck.Core.Program ParseSource(string source, bool optimize)
         {
-            Console.WriteLine(message);
+            Brainfuck.Core.Program program = Parser.Parse(source);
+            if (optimize)
+            {
+                program = program.Optimize();
+            }
 
-            Stopwatch sw = Stopwatch.StartNew();
-            action();
-            sw.Stop();
-
-            Console.WriteLine();
-            Console.WriteLine($"Elapsed {sw.Elapsed}");
-            Console.WriteLine();
-            return sw.Elapsed;
+            return program;
         }
 
         private static void PrintOnStepStartEventArgs(Brainfuck.Core.Program program, OnStepStartEventArgs args)
@@ -193,17 +196,18 @@ namespace Brainfuck.Repl
         {
             public string FileName { get; } = null;
             public bool Optimize { get; } = true;
-            public bool PrintHelp { get; } = false;
+            public bool Help { get; } = false;
             public bool StepExecution { get; } = false;
 
-            public static CommandLineArgument Parse(string[] args)
+            public static CommandLineArgument Parse(string[] args, out Setting setting)
             {
-                CommandLineArgument result = new CommandLineArgument(args, out bool success);
+                CommandLineArgument result = new CommandLineArgument(args, out setting, out bool success);
                 return success ? result : null;
             }
 
-            private CommandLineArgument(string[] args, out bool success)
+            private CommandLineArgument(string[] args, out Setting setting, out bool success)
             {
+                setting = Setting.Default;
                 success = true;
 
                 foreach (var arg in args)
@@ -218,7 +222,7 @@ namespace Brainfuck.Repl
                                 break;
                             case "-h":
                             case "--help":
-                                PrintHelp = true;
+                                Help = true;
                                 break;
                             case "-s":
                             case "--step":
@@ -234,6 +238,26 @@ namespace Brainfuck.Repl
                     {
                         FileName = arg;
                     }
+                }
+            }
+
+            public static void PrintHelp()
+            {
+                string[][] commands =
+                {
+                    new[]{ "-od, --optimize=disable", "Disable optimization" },
+                    new[]{ "-h, --help", "Print usage (this message)" },
+                    new[]{ "-s, --step", "Enable step execution" },
+                };
+
+                int maxCommandLength = commands.Max(c => c[0].Length);
+
+                Console.WriteLine("Usage: dotnet Brainfuck.Repl.dll [source-path] [options]");
+                Console.WriteLine();
+                Console.WriteLine("Options:");
+                foreach (var command in commands)
+                {
+                    Console.WriteLine($"  {command[0].PadRight(maxCommandLength)}  {command[1]}");
                 }
             }
         }
