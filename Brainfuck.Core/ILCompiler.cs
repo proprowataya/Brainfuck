@@ -31,6 +31,11 @@ namespace Brainfuck.Core
             new ILCompilerImplement(program, il, Setting).GenerateIL();
             return (Action)method.CreateDelegate(typeof(Action));
         }
+
+        public void CompileToIL(Program program, ILGenerator il)
+        {
+            new ILCompilerImplement(program, il, Setting).GenerateIL();
+        }
     }
 
     internal struct ILCompilerImplement
