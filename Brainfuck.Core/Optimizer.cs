@@ -63,6 +63,13 @@ namespace Brainfuck.Core
                         continue;
                     }
                 }
+                else if (operation.Opcode == Opcode.ClosingBracket
+                            && GetLast()?.Opcode == Opcode.ClosingBracket)
+                {
+                    // Successive closing brackets (']') can be reduced
+                    map.Add(i, operations.Count - 1);
+                    continue;
+                }
 
                 AddOperation(operation, i);
             }
