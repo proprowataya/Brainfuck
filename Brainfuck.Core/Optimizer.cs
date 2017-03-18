@@ -107,8 +107,15 @@ namespace Brainfuck.Core
 
             // Generate optimized code
 
-            // if (buffer[ptr] == 0) { goto `]`; }
-            AddCreatedOperation(new Operation(Opcode.BrZero, endIndex));
+            if (deltas.Where(p => p.Key < 0).Any())
+            {
+                // There are some accesses to buffer[ptr + x] where x < 0.
+                // Such accesses sometimes cause out of range access.
+                // So we have to make sure that buffer[ptr] != 0.
+
+                // if (buffer[ptr] == 0) { goto `]`; }
+                AddCreatedOperation(new Operation(Opcode.BrZero, endIndex));
+            }
 
             foreach (var p in deltas.Where(p => p.Key != 0))
             {
