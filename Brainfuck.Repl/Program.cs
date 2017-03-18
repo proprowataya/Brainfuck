@@ -60,7 +60,7 @@ namespace Brainfuck.Repl
             }
             else
             {
-                RunByILCompiler(program, setting, printHeader: false);
+                RunByILUnsafeCompiler(program, setting, printHeader: false);
             }
         }
 
