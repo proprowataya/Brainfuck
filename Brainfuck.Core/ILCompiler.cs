@@ -189,10 +189,7 @@ namespace Brainfuck.Core
                             LoadElementAddress(buffer, ptr, null);
                             il.Emit(OpCodes.Dup);
                             il.Emit(Ldind_Auto());
-                            //
-                            il.Emit(OpCodes.Ldc_I4, Operations[i].Value);
-                            Conv_I4_To_Upper_Auto();
-                            //
+                            Ldc_Auto(Operations[i].Value);
                             il.Emit(OpCodes.Add);
                             Conv_I4_To_Down_Auto();
                             il.Emit(Stind_Auto());
@@ -203,10 +200,8 @@ namespace Brainfuck.Core
                             LoadElementAddress(buffer, ptr, Operations[i].Value);
                             il.Emit(OpCodes.Dup);
                             il.Emit(Ldind_Auto());
-                            //
                             LoadElement(buffer, ptr);
-                            il.Emit(OpCodes.Ldc_I4, Operations[i].Value2);
-                            Conv_I4_To_Upper_Auto();
+                            Ldc_Auto(Operations[i].Value2);
                             il.Emit(OpCodes.Mul);
                             il.Emit(OpCodes.Add);
                             Conv_I4_To_Down_Auto();
@@ -339,6 +334,28 @@ namespace Brainfuck.Core
             }
         }
 
+        private void Ldc_Auto(int value)
+        {
+            if (setting.ElementType == typeof(Byte))
+            {
+                il.Emit(OpCodes.Ldc_I4, value);
+                Conv_I4_To_Auto();
+            }
+            else if (setting.ElementType == typeof(Int16))
+            {
+                il.Emit(OpCodes.Ldc_I4, value);
+                Conv_I4_To_Auto();
+            }
+            else if (setting.ElementType == typeof(Int32))
+            {
+                il.Emit(OpCodes.Ldc_I4, value);
+            }
+            else if (setting.ElementType == typeof(Int64))
+            {
+                il.Emit(OpCodes.Ldc_I8, (long)value);
+            }
+        }
+
         private OpCode Ldind_Auto() => LdindTable[setting.ElementType];
         private OpCode Stind_Auto() => StindTable[setting.ElementType];
         private OpCode Ldelem_Auto() => LdelemTable[setting.ElementType];
@@ -352,13 +369,13 @@ namespace Brainfuck.Core
             }
         }
 
-        private void Conv_I4_To_Upper_Auto()
-        {
-            if (setting.ElementType == typeof(Int64))
-            {
-                il.Emit(ConvTable[setting.ElementType]);
-            }
-        }
+        //private void Conv_I4_To_Upper_Auto()
+        //{
+        //    if (setting.ElementType == typeof(Int64))
+        //    {
+        //        il.Emit(ConvTable[setting.ElementType]);
+        //    }
+        //}
 
         private void Conv_I4_To_Auto()
         {
