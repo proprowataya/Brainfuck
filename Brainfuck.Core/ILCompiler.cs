@@ -146,9 +146,9 @@ namespace Brainfuck.Core
                 il.Emit(OpCodes.Ldloc, buffer);
                 il.Emit(OpCodes.Ldc_I4_0);
                 il.Emit(OpCodes.Ldelema, setting.ElementType);
-                il.Emit(OpCodes.Dup);
                 il.Emit(OpCodes.Stloc, pinned);
-                il.Emit(OpCodes.Conv_U);
+                il.Emit(OpCodes.Ldloc, pinned);
+                il.Emit(OpCodes.Conv_I);
                 il.Emit(OpCodes.Stloc, ptr);
             }
             else
@@ -170,7 +170,6 @@ namespace Brainfuck.Core
                                 il.Emit(OpCodes.Ldc_I4, Operations[i].Value);
                                 il.Emit(OpCodes.Conv_I);
                                 il.Emit(OpCodes.Ldc_I4, SizeOfElement);
-                                il.Emit(OpCodes.Conv_I);
                                 il.Emit(OpCodes.Mul);
                                 il.Emit(OpCodes.Add);
                                 il.Emit(OpCodes.Stloc, ptr);
