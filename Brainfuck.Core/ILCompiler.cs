@@ -82,6 +82,14 @@ namespace Brainfuck.Core
             [typeof(Int64)] = OpCodes.Conv_I8,
         };
 
+        private static readonly Dictionary<Type, int> SizeTable = new Dictionary<Type, int>()
+        {
+            [typeof(Byte)] = 1,
+            [typeof(Int16)] = 2,
+            [typeof(Int32)] = 4,
+            [typeof(Int64)] = 8,
+        };
+
         #endregion
 
         private readonly Program program;
@@ -109,7 +117,18 @@ namespace Brainfuck.Core
 
             // Variables
             LocalBuilder buffer = il.DeclareLocal(setting.ElementType.MakeArrayType());
-            LocalBuilder ptr = il.DeclareLocal(typeof(int));
+            LocalBuilder ptr = null;
+            LocalBuilder pinned = null;
+
+            if (setting.UnsafeCode)
+            {
+                pinned = il.DeclareLocal(setting.ElementType.MakeByRefType(), true);
+                ptr = il.DeclareLocal(setting.ElementType.MakePointerType());
+            }
+            else
+            {
+                ptr = il.DeclareLocal(typeof(int));
+            }
 
             /**
              * Generate IL
@@ -120,86 +139,137 @@ namespace Brainfuck.Core
             il.Emit(OpCodes.Newarr, setting.ElementType);
             il.Emit(OpCodes.Stloc, buffer);
 
-            // Initialize ptr
-            il.Emit(OpCodes.Ldc_I4_0);
-            il.Emit(OpCodes.Stloc, ptr);
+            if (setting.UnsafeCode)
+            {
+                // Initialize raw pointer
+                // fixed (T* ptr = buffer) {
+                il.Emit(OpCodes.Ldloc, buffer);
+                il.Emit(OpCodes.Ldc_I4_0);
+                il.Emit(OpCodes.Ldelema, setting.ElementType);
+                il.Emit(OpCodes.Dup);
+                il.Emit(OpCodes.Stloc, pinned);
+                il.Emit(OpCodes.Conv_U);
+                il.Emit(OpCodes.Stloc, ptr);
+            }
+            else
+            {
+                // Initialize ptr
+                il.Emit(OpCodes.Ldc_I4_0);
+                il.Emit(OpCodes.Stloc, ptr);
+            }
 
             for (int i = 0; i < Operations.Length; i++)
             {
                 switch (Operations[i].Opcode)
                 {
                     case Opcode.AddPtr:
-                        il.Emit(OpCodes.Ldloc, ptr);
-                        il.Emit(OpCodes.Ldc_I4, Operations[i].Value);
-                        il.Emit(OpCodes.Add);
-                        il.Emit(OpCodes.Stloc, ptr);
+                        {
+                            if (setting.UnsafeCode)
+                            {
+                                il.Emit(OpCodes.Ldloc, ptr);
+                                il.Emit(OpCodes.Ldc_I4, Operations[i].Value);
+                                il.Emit(OpCodes.Conv_I);
+                                il.Emit(OpCodes.Ldc_I4, SizeOfElement);
+                                il.Emit(OpCodes.Conv_I);
+                                il.Emit(OpCodes.Mul);
+                                il.Emit(OpCodes.Add);
+                                il.Emit(OpCodes.Stloc, ptr);
+                            }
+                            else
+                            {
+                                il.Emit(OpCodes.Ldloc, ptr);
+                                il.Emit(OpCodes.Ldc_I4, Operations[i].Value);
+                                il.Emit(OpCodes.Add);
+                                il.Emit(OpCodes.Stloc, ptr);
+                            }
+                        }
                         break;
                     case Opcode.AddValue:
-                        il.Emit(OpCodes.Ldloc, buffer);
-                        il.Emit(OpCodes.Ldloc, ptr);
-                        il.Emit(OpCodes.Ldelema, setting.ElementType);
-                        il.Emit(OpCodes.Dup);
-                        il.Emit(Ldind_Auto());
-                        //
-                        il.Emit(OpCodes.Ldc_I4, Operations[i].Value);
-                        Conv_I4_To_Upper_Auto();
-                        //
-                        il.Emit(OpCodes.Add);
-                        Conv_I4_To_Down_Auto();
-                        il.Emit(Stind_Auto());
+                        {
+                            LoadElementAddress(buffer, ptr, null);
+                            il.Emit(OpCodes.Dup);
+                            il.Emit(Ldind_Auto());
+                            //
+                            il.Emit(OpCodes.Ldc_I4, Operations[i].Value);
+                            Conv_I4_To_Upper_Auto();
+                            //
+                            il.Emit(OpCodes.Add);
+                            Conv_I4_To_Down_Auto();
+                            il.Emit(Stind_Auto());
+                        }
                         break;
                     case Opcode.MultAdd:
-                        il.Emit(OpCodes.Ldloc, buffer);
-                        il.Emit(OpCodes.Ldloc, ptr);
-                        il.Emit(OpCodes.Ldc_I4, Operations[i].Value);
-                        il.Emit(OpCodes.Add);
-                        il.Emit(OpCodes.Ldelema, setting.ElementType);
-                        il.Emit(OpCodes.Dup);
-                        il.Emit(Ldind_Auto());
-                        //
-                        il.Emit(OpCodes.Ldloc, buffer);
-                        il.Emit(OpCodes.Ldloc, ptr);
-                        il.Emit(Ldelem_Auto());
-                        il.Emit(OpCodes.Ldc_I4, Operations[i].Value2);
-                        Conv_I4_To_Upper_Auto();
-                        il.Emit(OpCodes.Mul);
-                        il.Emit(OpCodes.Add);
-                        Conv_I4_To_Down_Auto();
-                        il.Emit(Stind_Auto());
+                        {
+                            LoadElementAddress(buffer, ptr, Operations[i].Value);
+                            il.Emit(OpCodes.Dup);
+                            il.Emit(Ldind_Auto());
+                            //
+                            LoadElement(buffer, ptr);
+                            il.Emit(OpCodes.Ldc_I4, Operations[i].Value2);
+                            Conv_I4_To_Upper_Auto();
+                            il.Emit(OpCodes.Mul);
+                            il.Emit(OpCodes.Add);
+                            Conv_I4_To_Down_Auto();
+                            il.Emit(Stind_Auto());
+                        }
                         break;
                     case Opcode.Assign:
-                        Debug.Assert(Operations[i].Value == 0);
-                        il.Emit(OpCodes.Ldloc, buffer);
-                        il.Emit(OpCodes.Ldloc, ptr);
-                        il.Emit(OpCodes.Ldc_I4, Operations[i].Value2);
-                        Conv_I4_To_Auto();
-                        il.Emit(Stelem_Auto());
+                        {
+                            Debug.Assert(Operations[i].Value == 0);
+
+                            if (setting.UnsafeCode)
+                            {
+                                il.Emit(OpCodes.Ldloc, ptr);
+                                il.Emit(OpCodes.Ldc_I4, Operations[i].Value2);
+                                Conv_I4_To_Auto();
+                                il.Emit(Stind_Auto());
+                            }
+                            else
+                            {
+                                il.Emit(OpCodes.Ldloc, buffer);
+                                il.Emit(OpCodes.Ldloc, ptr);
+                                il.Emit(OpCodes.Ldc_I4, Operations[i].Value2);
+                                Conv_I4_To_Auto();
+                                il.Emit(Stelem_Auto());
+                            }
+                        }
                         break;
                     case Opcode.BrZero:
                     case Opcode.OpeningBracket:
-                        il.Emit(OpCodes.Ldloc, buffer);
-                        il.Emit(OpCodes.Ldloc, ptr);
-                        il.Emit(Ldelem_Auto());
-                        il.Emit(OpCodes.Brfalse, labels[Operations[i].Value]);
+                        {
+                            LoadElement(buffer, ptr);
+                            il.Emit(OpCodes.Brfalse, labels[Operations[i].Value]);
+                        }
                         break;
                     case Opcode.ClosingBracket:
-                        il.Emit(OpCodes.Ldloc, buffer);
-                        il.Emit(OpCodes.Ldloc, ptr);
-                        il.Emit(Ldelem_Auto());
-                        il.Emit(OpCodes.Brtrue, labels[Operations[i].Value]);
+                        {
+                            LoadElement(buffer, ptr);
+                            il.Emit(OpCodes.Brtrue, labels[Operations[i].Value]);
+                        }
                         break;
                     case Opcode.Put:
-                        il.Emit(OpCodes.Ldloc, buffer);
-                        il.Emit(OpCodes.Ldloc, ptr);
-                        il.Emit(Ldelem_Auto());
-                        il.Emit(OpCodes.Conv_U2);
-                        il.EmitCall(OpCodes.Call, typeof(Console).GetMethod(nameof(Console.Write), new[] { typeof(char) }), null);
+                        {
+                            LoadElement(buffer, ptr);
+                            il.Emit(OpCodes.Conv_U2);
+                            il.EmitCall(OpCodes.Call, typeof(Console).GetMethod(nameof(Console.Write), new[] { typeof(char) }), null);
+                        }
                         break;
                     case Opcode.Read:
-                        il.Emit(OpCodes.Ldloc, buffer);
-                        il.Emit(OpCodes.Ldloc, ptr);
-                        il.EmitCall(OpCodes.Call, typeof(Console).GetMethod(nameof(Console.Read), new Type[0]), null);
-                        il.Emit(Stelem_Auto());
+                        {
+                            if (setting.UnsafeCode)
+                            {
+                                il.Emit(OpCodes.Ldloc, ptr);
+                                il.EmitCall(OpCodes.Call, typeof(Console).GetMethod(nameof(Console.Read), new Type[0]), null);
+                                il.Emit(Stind_Auto());
+                            }
+                            else
+                            {
+                                il.Emit(OpCodes.Ldloc, buffer);
+                                il.Emit(OpCodes.Ldloc, ptr);
+                                il.EmitCall(OpCodes.Call, typeof(Console).GetMethod(nameof(Console.Read), new Type[0]), null);
+                                il.Emit(Stelem_Auto());
+                            }
+                        }
                         break;
                     case Opcode.Unknown:
                     default:
@@ -214,7 +284,59 @@ namespace Brainfuck.Core
                 }
             }
 
+            if (setting.UnsafeCode)
+            {
+                il.Emit(OpCodes.Ldc_I4_0);
+                il.Emit(OpCodes.Conv_I);
+                il.Emit(OpCodes.Stloc, ptr);
+                il.Emit(OpCodes.Ldc_I4_0);
+                il.Emit(OpCodes.Conv_U);
+                il.Emit(OpCodes.Stloc, pinned);
+            }
+
             il.Emit(OpCodes.Ret);
+        }
+
+        private void LoadElementAddress(LocalBuilder buffer, LocalBuilder ptr, int? offset)
+        {
+            if (setting.UnsafeCode)
+            {
+                il.Emit(OpCodes.Ldloc, ptr);
+                if (offset is int val && val != 0)
+                {
+                    il.Emit(OpCodes.Ldc_I4, val);
+                    il.Emit(OpCodes.Conv_I);
+                    il.Emit(OpCodes.Ldc_I4, SizeOfElement);
+                    il.Emit(OpCodes.Mul);
+                    il.Emit(OpCodes.Add);
+                }
+            }
+            else
+            {
+                il.Emit(OpCodes.Ldloc, buffer);
+                il.Emit(OpCodes.Ldloc, ptr);
+                if (offset is int val && val != 0)
+                {
+                    il.Emit(OpCodes.Ldc_I4, val);
+                    il.Emit(OpCodes.Add);
+                }
+                il.Emit(OpCodes.Ldelema, setting.ElementType);
+            }
+        }
+
+        private void LoadElement(LocalBuilder buffer, LocalBuilder ptr)
+        {
+            if (setting.UnsafeCode)
+            {
+                il.Emit(OpCodes.Ldloc, ptr);
+                il.Emit(Ldind_Auto());
+            }
+            else
+            {
+                il.Emit(OpCodes.Ldloc, buffer);
+                il.Emit(OpCodes.Ldloc, ptr);
+                il.Emit(Ldelem_Auto());
+            }
         }
 
         private OpCode Ldind_Auto() => LdindTable[setting.ElementType];
@@ -242,6 +364,8 @@ namespace Brainfuck.Core
         {
             il.Emit(ConvTable[setting.ElementType]);
         }
+
+        private int SizeOfElement => SizeTable[setting.ElementType];
 
         private HashSet<int> GetLabeledAddresses(Program program)
         {

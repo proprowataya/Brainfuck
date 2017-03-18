@@ -52,12 +52,9 @@ namespace Brainfuck.Test
                 {
                     Assert.Equal(expected, RunTest(GetInterpreterAction(type), program, stdin));
 
-                    foreach (var useDynamicBuffer in new[] { /* true, */ false })
+                    foreach (var unsafeCode in new[] { true, false })
                     {
-                        Setting setting = Setting.Default.WithElementType(type);
-                        if (useDynamicBuffer)
-                            setting = setting.WithBufferSize(1).WithUseDynamicBuffer(useDynamicBuffer);
-
+                        Setting setting = Setting.Default.WithElementType(type).WithUnsafeCode(unsafeCode);
                         Assert.Equal(expected, RunTest(GetCompilerAction(setting), program, stdin));
                         Assert.Equal(expected, RunTest(GetILCompilerAction(setting), program, stdin));
                     }

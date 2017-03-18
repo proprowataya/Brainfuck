@@ -42,6 +42,7 @@ namespace Brainfuck.Repl
             {
                 Brainfuck.Core.Program program = ParseSource(source, command.Optimize);
 
+                RunByILUnsafeCompiler(program, setting, printHeader: true);
                 RunByILCompiler(program, setting, printHeader: true);
                 RunByExpressionCompiler(program, setting, printHeader: true);
                 RunByInterpreter(program, setting, printHeader: true, stepExecution: command.StepExecution);
@@ -64,6 +65,16 @@ namespace Brainfuck.Repl
         }
 
         #region Runs
+
+        private static void RunByILUnsafeCompiler(Brainfuck.Core.Program program, Setting setting, bool printHeader)
+        {
+            Run(() =>
+            {
+                ILCompiler compiler = new ILCompiler(setting.WithUnsafeCode(true));
+                Action action = compiler.Compile(program);
+                action();
+            }, printHeader ? "===== Compiler (System.Reflection.Emit, unsafe) =====" : null);
+        }
 
         private static void RunByILCompiler(Brainfuck.Core.Program program, Setting setting, bool printHeader)
         {
