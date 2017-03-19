@@ -7,182 +7,121 @@ namespace Brainfuck.Core
 {
     public static class Optimizer
     {
-        public static Program Optimize(this Program program) => new OptimizerImplement(program).Optimize();
-    }
-
-    internal struct OptimizerImplement
-    {
-        #region Fields And Property
-
-        private readonly Program program;
-        private readonly ImmutableArray<Operation>.Builder operations;
-        private readonly Dictionary<int, int> map;
-
-        private ImmutableArray<Operation> Operations => program.Operations;
-
-        #endregion
-
-        public OptimizerImplement(Program program)
+        public static Program Optimize(this Program program)
         {
-            this.program = program;
-            this.operations = ImmutableArray.CreateBuilder<Operation>();
-            this.map = new Dictionary<int, int>();
+            return new Program(program.Source, OptimizeReduceStep(program.Operations));
         }
 
-        public Program Optimize()
+        private static ImmutableArray<IOperation> OptimizeReduceStep(IReadOnlyList<IOperation> operations, int offset = 0)
         {
-            for (int i = 0; i < Operations.Length; i++)
+            var optimized = new List<IOperation>();
+            var sublist = new List<IOperation>();
+
+            void EmitAndReset()
             {
-                Operation operation = Operations[i];
-                if (operation.Opcode == Opcode.Unknown)
-                {
-                    continue;
-                }
-
-                if (operation.Opcode == Opcode.OpeningBracket)
-                {
-                    if (TryOptimizeSimpleRoop(i))
-                    {
-                        i = Operations[i].Value;
-                        continue;
-                    }
-                }
-
-                if (IsReducible(operation.Opcode))
-                {
-                    // If possible, we reduce operation
-                    if (GetLast()?.Opcode == operation.Opcode)
-                    {
-                        Operation last = RemoveLast();
-                        operation = new Operation(operation.Opcode, last.Value + operation.Value);
-                    }
-
-                    if (operation.Value == 0)
-                    {
-                        // This operation has no effect, so we ignore it
-                        continue;
-                    }
-                }
-                else if (operation.Opcode == Opcode.ClosingBracket
-                            && GetLast()?.Opcode == Opcode.ClosingBracket)
-                {
-                    // Successive closing brackets (']') can be reduced
-                    map.Add(i, operations.Count - 1);
-                    continue;
-                }
-
-                AddOperation(operation, i);
+                optimized.AddRange(sublist);
+                optimized.Add(new AddPtr(offset));
+                sublist.Clear();
+                offset = 0;
             }
 
-            CorrectJumpAddresses();
-
-            return new Program(program.Source, operations.ToImmutable());
-        }
-
-        private bool TryOptimizeSimpleRoop(int startIndex)
-        {
-            int endIndex = Operations[startIndex].Value;
-            var deltas = new Dictionary<int, int>() { [0] = 0 };
-            int offset = 0;
-
-            for (int i = startIndex + 1; i < endIndex; i++)
-            {
-                switch (Operations[i].Opcode)
-                {
-                    case Opcode.AddPtr:
-                        offset += Operations[i].Value;
-                        break;
-                    case Opcode.AddValue:
-                        if (!deltas.ContainsKey(offset))
-                        {
-                            deltas[offset] = 0;
-                        }
-                        deltas[offset] += Operations[i].Value;
-                        break;
-                    case Opcode.Unknown:
-                        continue;
-                    default:
-                        // We can't optimize this roop
-                        return false;
-                }
-            }
-
-            if (offset != 0 || deltas[0] != -1)
-            {
-                return false;
-            }
-
-            // Generate optimized code
-
-            if (deltas.Where(p => p.Key < 0).Any())
-            {
-                // There are some accesses to buffer[ptr + x] where x < 0.
-                // Such accesses sometimes cause out of range access.
-                // So we have to make sure that buffer[ptr] != 0.
-
-                // if (buffer[ptr] == 0) { goto `]`; }
-                AddCreatedOperation(new Operation(Opcode.BrZero, endIndex));
-            }
-
-            foreach (var p in deltas.Where(p => p.Key != 0))
-            {
-                // buffer[ptr + p.Key] += buffer[ptr] * p.Value
-                AddCreatedOperation(new Operation(Opcode.MultAdd, p.Key, p.Value));
-            }
-
-            // buffer[ptr] = 0
-            AddCreatedOperation(new Operation(Opcode.Assign, 0, 0));
-
-            // We have to update address map manually
-            map.Add(endIndex, operations.Count - 1);
-
-            return true;
-        }
-
-        private void AddOperation(Operation operation, int index)
-        {
-            map.Add(index, operations.Count);   // Update address map
-            operations.Add(operation);
-        }
-
-        private void AddCreatedOperation(Operation operation)
-        {
-            operations.Add(operation);
-        }
-
-        private void CorrectJumpAddresses()
-        {
             for (int i = 0; i < operations.Count; i++)
             {
-                switch (operations[i].Opcode)
+                IOperation op = operations[i].WithAddLocation(offset);
+
+                if (op is Roop roop)
                 {
-                    case Opcode.BrZero:
-                    case Opcode.OpeningBracket:
-                    case Opcode.ClosingBracket:
-                        operations[i] = new Operation(operations[i].Opcode, map[operations[i].Value]);
-                        break;
+                    // Emit delayed code and clear state
+                    EmitAndReset();
+
+                    // Optimize inner code
+                    optimized.Add(new Roop(OptimizeReduceStep(roop.Operations)));
+                }
+                else if (op is IfTrue iftrue)
+                {
+                    // Assume that IfTrue doesn't change ptr as a result
+                    optimized.Add(new IfTrue(iftrue.Condition, OptimizeReduceStep(iftrue.Operations, offset)));
+                }
+                else if (op is AddPtr addptr)
+                {
+                    offset += addptr.Value;
+                }
+                else if (op is Put put)
+                {
+                    var emits = sublist.OfType<IWriteOperation>().Where(x => x.Dest == put.Src).ToArray();
+                    optimized.AddRange(emits);
+                    foreach (var item in emits)
+                    {
+                        sublist.Remove(item);
+                    }
+                    optimized.Add(put);
+                }
+                else if (op is IWriteOperation write)
+                {
+                    // Find a candidate to be reduced with 'op'
+                    IWriteOperation lastReducable = sublist.OfType<IWriteOperation>()
+                                                           .LastOrDefault(x => x.Dest == write.Dest);
+
+                    // If the candidate was found and can be reducable
+                    if (lastReducable != null && TryReduce(lastReducable, write) is IOperation reduced)
+                    {
+                        sublist.Remove(lastReducable);
+                        sublist.Add(reduced);
+                    }
+                    else
+                    {
+                        sublist.Add(op);
+                    }
+                }
+                else
+                {
+                    sublist.Add(op);
                 }
             }
+
+            EmitAndReset();
+            return ImmutableArray.CreateRange(optimized);
         }
 
-        private Operation? GetLast() => operations.Count > 0 ? operations.Last() : (Operation?)null;
-        private Operation RemoveLast()
+        private static IOperation TryReduce(dynamic a, dynamic b) => _TryReduce(a, b);
+
+        #region Reduce methods
+
+        private static IOperation _TryReduce(IOperation a, IOperation b)
         {
-            Operation last = operations.Last();
-            operations.RemoveAt(operations.Count - 1);
-            return last;
+            // Default implementation
+            return null;
         }
 
-        private static bool IsReducible(Opcode opcode)
+        private static IOperation _TryReduce(AddPtr a, AddPtr b)
         {
-            switch (opcode)
-            {
-                case Opcode.AddPtr:
-                case Opcode.AddValue:
-                    return true;
-                default:
-                    return false;
-            }
+            return new AddPtr(a.Value + b.Value);
         }
+
+        private static IOperation _TryReduce(AddValue a, AddValue b)
+        {
+            if (a.Dest == b.Dest)
+                return new AddValue(a.Dest, a.Value + b.Value);
+            else
+                return null;
+        }
+
+        private static IOperation _TryReduce(Assign a, AddValue b)
+        {
+            if (a.Dest == b.Dest)
+                return new Assign(a.Dest, a.Value + b.Value);
+            else
+                return null;
+        }
+
+        private static IOperation _TryReduce(IWriteOperation a, Assign b)
+        {
+            if (a.Dest == b.Dest)
+                return b;
+            else
+                return null;
+        }
+
+        #endregion
     }
 }

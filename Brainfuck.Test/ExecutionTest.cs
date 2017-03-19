@@ -80,7 +80,6 @@ namespace Brainfuck.Test
                     foreach (var unsafeCode in new[] { true, false })
                     {
                         Setting setting = Setting.Default.WithElementType(type).WithUnsafeCode(unsafeCode);
-                        Assert.Equal(expected, RunTest(GetCompilerAction(setting), program, stdin));
                         Assert.Equal(expected, RunTest(GetILCompilerAction(setting), program, stdin));
                     }
                 }
@@ -103,16 +102,6 @@ namespace Brainfuck.Test
         private static Action<Program> GetInterpreterAction(Type elementType)
         {
             return program => new Interpreter(Setting.Default.WithElementType(elementType)).Execute(program);
-        }
-
-        private static Action<Program> GetCompilerAction(Setting setting)
-        {
-            return program =>
-            {
-                Compiler compiler = new Compiler(setting);
-                Action action = compiler.Compile(program);
-                action();
-            };
         }
 
         private static Action<Program> GetILCompilerAction(Setting setting)

@@ -9,64 +9,61 @@ namespace Brainfuck.Core
     {
         public static Program Parse(string source)
         {
-            var operations = ImmutableArray.CreateBuilder<Operation>(source.Length);
-            var stack = new Stack<int>();
-            var brackets = new List<int>();
-            var jumpAddress = new Dictionary<int, int>();
+            Stack<List<IOperation>> stack = new Stack<List<IOperation>>();
+            List<IOperation> list = new List<IOperation>();
+
+            stack.Push(list);
 
             for (int i = 0; i < source.Length; i++)
             {
                 switch (source[i])
                 {
                     case '>':
-                        operations.Add(new Operation(Opcode.AddPtr, 1));
+                        list.Add(new AddPtr(1));
                         break;
                     case '<':
-                        operations.Add(new Operation(Opcode.AddPtr, -1));
+                        list.Add(new AddPtr(-1));
                         break;
                     case '+':
-                        operations.Add(new Operation(Opcode.AddValue, 1));
+                        list.Add(new AddValue(MemoryLocation.Zero, 1));
                         break;
                     case '-':
-                        operations.Add(new Operation(Opcode.AddValue, -1));
+                        list.Add(new AddValue(MemoryLocation.Zero, -1));
                         break;
                     case '.':
-                        operations.Add(new Operation(Opcode.Put));
+                        list.Add(new Put(MemoryLocation.Zero));
                         break;
                     case ',':
-                        operations.Add(new Operation(Opcode.Read));
+                        list.Add(new Read(MemoryLocation.Zero));
                         break;
                     case '[':
                         {
-                            stack.Push(i);
-                            brackets.Add(i);
-                            operations.Add(new Operation(Opcode.Unknown));
+                            var newList = new List<IOperation>();
+                            stack.Push(newList);
+                            list = newList;
                             break;
                         }
                     case ']':
                         {
-                            int startAddress = stack.Pop();
-                            jumpAddress.Add(startAddress, i);
-                            operations.Add(new Operation(Opcode.ClosingBracket, startAddress));
+                            stack.Pop();
+                            stack.Peek().Add(new Roop(ImmutableArray.CreateRange(list)));
+                            list = stack.Peek();
                             break;
                         }
                     default:
-                        ManageUnknownChar(source[i]);
-                        operations.Add(new Operation(Opcode.Unknown));
+                        // Do nothing
                         break;
                 }
             }
 
-            foreach (var index in brackets)
+            if (stack.Count != 1)
             {
-                operations[index] = new Operation(Opcode.OpeningBracket, jumpAddress[index]);
+                // TODO
+                throw new InvalidOperationException();
             }
 
-            Debug.Assert(operations.Count == source.Length);
-            return new Program(source, operations.MoveToImmutable());
+            Debug.Assert(stack.Peek() == list);
+            return new Program(source, ImmutableArray.CreateRange(list));
         }
-
-        private static void ManageUnknownChar(char value) { /* Do nothing */ }
-        //private static void ManageUnknownChar(char value) => Console.WriteLine($"Warning : Unknown char '{value}'");
     }
 }

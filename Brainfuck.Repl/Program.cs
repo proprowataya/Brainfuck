@@ -42,9 +42,8 @@ namespace Brainfuck.Repl
             {
                 Brainfuck.Core.Program program = ParseSource(source, command.Optimize);
 
-                RunByILUnsafeCompiler(program, setting, printHeader: true);
-                RunByILCompiler(program, setting, printHeader: true);
-                RunByExpressionCompiler(program, setting, printHeader: true);
+                //RunByILUnsafeCompiler(program, setting, printHeader: true);
+                //RunByILCompiler(program, setting, printHeader: true);
                 RunByInterpreter(program, setting, printHeader: true, stepExecution: command.StepExecution);
             }
         }
@@ -84,16 +83,6 @@ namespace Brainfuck.Repl
                 Action action = compiler.Compile(program);
                 action();
             }, printHeader ? "===== Compiler (System.Reflection.Emit) =====" : null);
-        }
-
-        private static void RunByExpressionCompiler(Brainfuck.Core.Program program, Setting setting, bool printHeader)
-        {
-            Run(() =>
-            {
-                Compiler compiler = new Compiler(setting);
-                Action action = compiler.Compile(program);
-                action();
-            }, printHeader ? "===== Compiler (System.Linq.Expressions) =====" : null);
         }
 
         private static void RunByInterpreter(Brainfuck.Core.Program program, Setting setting, bool printHeader, bool stepExecution)

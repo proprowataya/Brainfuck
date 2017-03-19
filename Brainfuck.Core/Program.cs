@@ -5,9 +5,9 @@ namespace Brainfuck.Core
     public class Program
     {
         public string Source { get; }
-        public ImmutableArray<Operation> Operations { get; }
+        public ImmutableArray<IOperation> Operations { get; }
 
-        internal Program(string source, ImmutableArray<Operation> operations)
+        internal Program(string source, ImmutableArray<IOperation> operations)
         {
             Source = source;
             Operations = operations;

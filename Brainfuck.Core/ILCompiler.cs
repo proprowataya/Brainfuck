@@ -26,21 +26,24 @@ namespace Brainfuck.Core
 
         public Action Compile(Program program)
         {
-            DynamicMethod method = new DynamicMethod(MethodName, null, null);
-            ILGenerator il = method.GetILGenerator();
-            new ILCompilerImplement(program, il, Setting).GenerateIL();
-            return (Action)method.CreateDelegate(typeof(Action));
+            //DynamicMethod method = new DynamicMethod(MethodName, null, null);
+            //ILGenerator il = method.GetILGenerator();
+            //new ILCompilerImplement(program, il, Setting).GenerateIL();
+            //return (Action)method.CreateDelegate(typeof(Action));
+            throw new NotImplementedException();
         }
 
         public void CompileToIL(Program program, ILGenerator il)
         {
-            new ILCompilerImplement(program, il, Setting).GenerateIL();
+            //new ILCompilerImplement(program, il, Setting).GenerateIL();
+            throw new NotImplementedException();
         }
     }
 
+#if false
     internal struct ILCompilerImplement
     {
-        #region Constants
+#region Constants
 
         private static readonly Dictionary<Type, OpCode> LdindTable = new Dictionary<Type, OpCode>()
         {
@@ -90,13 +93,13 @@ namespace Brainfuck.Core
             [typeof(Int64)] = 8,
         };
 
-        #endregion
+#endregion
 
         private readonly Program program;
         private readonly ILGenerator il;
         private readonly Setting setting;
 
-        private ImmutableArray<Operation> Operations => program.Operations;
+        private ImmutableArray<IOperation> Operations => program.Operations;
 
         public ILCompilerImplement(Program program, ILGenerator il, Setting setting)
         {
@@ -402,4 +405,5 @@ namespace Brainfuck.Core
             return set;
         }
     }
+#endif
 }

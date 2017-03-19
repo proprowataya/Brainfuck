@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Threading;
 
 namespace Brainfuck.Core
@@ -39,88 +40,92 @@ namespace Brainfuck.Core
             }
         }
 
-        internal void Execute<T, TOperator>(Program program, CancellationToken token) where TOperator : IOperator<T>
+        private void Execute<T, TOperator>(Program program, CancellationToken token) where TOperator : IOperator<T>
         {
-            TOperator op = default(TOperator);
             T[] buffer = new T[Setting.BufferSize];
             int ptr = 0;
             int step = 0;
 
-            for (int i = 0; i < program.Operations.Length; i++, step++)
+            ExecuteCore(program.Operations);
+
+            void ExecuteCore(ImmutableArray<IOperation> operations)
             {
-                token.ThrowIfCancellationRequested();
-                OnStepStart?.Invoke(new OnStepStartEventArgs(step, i, ptr, new ArrayView<T>(buffer)));
+                TOperator top = default(TOperator);
 
-                Operation operation = program.Operations[i];
-                int value = operation.Value;
-                ref T current = ref buffer[ptr];
-
-                switch (operation.Opcode)
+                for (int i = 0; i < operations.Length; i++, step++)
                 {
-                    case Opcode.AddPtr:
-                        ptr += value;
-                        if (ptr >= buffer.Length)
-                        {
-                            buffer = ExpandBuffer(buffer, ptr + 1);
-                        }
-                        break;
-                    case Opcode.AddValue:
-                        current = op.Add(current, value);
-                        break;
-                    case Opcode.Put:
-                        Put(op.ToChar(current));
-                        break;
-                    case Opcode.Read:
-                        current = op.FromInt(Read());
-                        break;
-                    case Opcode.BrZero:
-                    case Opcode.OpeningBracket:
-                        if (op.IsZero(current))
-                        {
-                            i = value;
-                        }
-                        break;
-                    case Opcode.ClosingBracket:
-                        if (op.IsNotZero(current))
-                        {
-                            i = value;
-                        }
-                        break;
-                    case Opcode.MultAdd:
-                        {
-                            if (ptr + operation.Value >= buffer.Length)
+                    token.ThrowIfCancellationRequested();
+                    OnStepStart?.Invoke(new OnStepStartEventArgs(step, i, ptr, new ArrayView<T>(buffer)));
+
+                    EnsureIndex(ptr + operations[i].MaxAccessOffset);
+
+                    switch (operations[i])
+                    {
+                        case AddPtr op:
                             {
-                                buffer = ExpandBuffer(buffer, ptr + operation.Value + 1);
+                                ptr += op.Value;
                             }
-                            ref T dest = ref buffer[ptr + operation.Value];
-                            dest = op.Add(dest, op.Mult(current, operation.Value2));
-                        }
-                        break;
-                    case Opcode.Assign:
-                        {
-                            if (ptr + operation.Value >= buffer.Length)
+                            break;
+                        case AddValue op:
                             {
-                                buffer = ExpandBuffer(buffer, ptr + operation.Value + 1);
+                                ref T dest = ref buffer[ptr + op.Dest.Offset];
+                                dest = top.Add(dest, op.Value);
                             }
-                            ref T dest = ref buffer[ptr + operation.Value];
-                            dest = op.FromInt(operation.Value2);
-                        }
-                        break;
-                    case Opcode.Unknown:
-                    default:
-                        // Do nothing
-                        break;
+                            break;
+                        case MultAdd op:
+                            {
+                                ref T src = ref buffer[ptr + op.Src.Offset];
+                                ref T dest = ref buffer[ptr + op.Dest.Offset];
+                                dest = top.Add(dest, top.Mult(src, op.Value));
+                            }
+                            break;
+                        case Assign op:
+                            {
+                                buffer[ptr + op.Dest.Offset] = top.FromInt(op.Value);
+                            }
+                            break;
+                        case Put op:
+                            {
+                                Put(top.ToChar(buffer[ptr + op.Src.Offset]));
+                            }
+                            break;
+                        case Read op:
+                            {
+                                buffer[ptr + op.Dest.Offset] = top.FromInt(Read());
+                            }
+                            break;
+                        case Roop op:
+                            {
+                                while (top.IsNotZero(buffer[ptr]))
+                                {
+                                    ExecuteCore(op.Operations);
+                                }
+                            }
+                            break;
+                        case IfTrue op:
+                            {
+                                if (top.IsNotZero(buffer[ptr + op.Condition.Offset]))
+                                {
+                                    ExecuteCore(op.Operations);
+                                }
+                            }
+                            break;
+                        default:
+                            throw new InvalidOperationException();
+                    }
                 }
             }
-        }
 
-        private static T[] ExpandBuffer<T>(T[] buffer, int minLength)
-        {
-            int newSize = Math.Max(buffer.Length * 2, minLength);
-            T[] newBuffer = new T[newSize];
-            Array.Copy(buffer, newBuffer, buffer.Length);
-            buffer = newBuffer;
-            return buffer;
+            void EnsureIndex(int index)
+            {
+                if (index >= buffer.Length)
+                {
+                    int newSize = Math.Max(buffer.Length * 2, index + 1);
+                    T[] newBuffer = new T[newSize];
+                    Array.Copy(buffer, newBuffer, buffer.Length);
+                    buffer = newBuffer;
+                }
+            }
         }
 
         private static int Read() => Console.Read();
