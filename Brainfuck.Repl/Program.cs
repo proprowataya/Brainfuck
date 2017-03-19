@@ -42,8 +42,8 @@ namespace Brainfuck.Repl
             {
                 Brainfuck.Core.Program program = ParseSource(source, command.Optimize);
 
-                //RunByILUnsafeCompiler(program, setting, printHeader: true);
-                //RunByILCompiler(program, setting, printHeader: true);
+                RunByILUnsafeCompiler(program, setting, printHeader: true);
+                RunByILCompiler(program, setting, printHeader: true);
                 RunByInterpreter(program, setting, printHeader: true, stepExecution: command.StepExecution);
             }
         }
