@@ -268,10 +268,10 @@ namespace Brainfuck.Core
                             {
                                 il.MarkLabel(begin);
                                 EmitCore(op.Operations, buffer, ptr, emitReturnAtLast);
-                                il.MarkLabel(end);
                             }
                             LoadElement(buffer, ptr, null);
                             il.Emit(OpCodes.Brtrue, begin);
+                            il.MarkLabel(end);
                         }
                         break;
                     case IfTrue op:
