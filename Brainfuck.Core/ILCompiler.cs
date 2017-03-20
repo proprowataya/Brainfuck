@@ -267,7 +267,7 @@ namespace Brainfuck.Core
                             il.Emit(OpCodes.Brfalse, end);
                             {
                                 il.MarkLabel(begin);
-                                EmitCore(op.Operations, buffer, ptr, emitReturnAtLast);
+                                EmitCore(op.Operations, buffer, ptr, emitReturnAtLast: false);
                             }
                             LoadElement(buffer, ptr, null);
                             il.Emit(OpCodes.Brtrue, begin);
@@ -280,7 +280,7 @@ namespace Brainfuck.Core
 
                             LoadElement(buffer, ptr, null);
                             il.Emit(OpCodes.Brfalse, end);
-                            EmitCore(op.Operations, buffer, ptr, emitReturnAtLast);
+                            EmitCore(op.Operations, buffer, ptr, emitReturnAtLast: false);
                             il.MarkLabel(end);
                         }
                         break;
