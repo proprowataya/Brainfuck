@@ -16,10 +16,12 @@ namespace Brainfuck.Core
         MemoryLocation Dest { get; }
     }
 
+    #region Operations
+
     public sealed class AddPtr : IOperation
     {
         public int Value { get; }
-        
+
         public AddPtr(int value)
         {
             Value = value;
@@ -129,6 +131,22 @@ namespace Brainfuck.Core
         public IOperation WithAddLocation(int delta) => this;
         public int MaxAccessOffset => 0;
     }
+
+    public sealed class DummyWriteOp : IWriteOperation
+    {
+        public MemoryLocation Dest { get; }
+
+        public DummyWriteOp(MemoryLocation dest)
+        {
+            Dest = dest;
+        }
+
+
+        public IOperation WithAddLocation(int delta) => new DummyWriteOp(Dest.WithAdd(delta));
+        public int MaxAccessOffset => Dest.Offset;
+    }
+
+    #endregion
 
     public struct MemoryLocation
     {

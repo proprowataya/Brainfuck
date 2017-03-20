@@ -48,13 +48,11 @@ namespace Brainfuck.Core
                 }
                 else if (op is Put put)
                 {
-                    var emits = sublist.OfType<IWriteOperation>().Where(x => x.Dest == put.Src).ToArray();
-                    optimized.AddRange(emits);
-                    foreach (var item in emits)
-                    {
-                        sublist.Remove(item);
-                    }
-                    optimized.Add(put);
+                    sublist.Add(put);
+
+                    // In order to suppress elimination of adds before put operation,
+                    // We derive DummyWriteOp
+                    sublist.Add(new DummyWriteOp(new MemoryLocation(offset)));
                 }
                 else if (op is IWriteOperation write)
                 {
@@ -80,7 +78,10 @@ namespace Brainfuck.Core
             }
 
             EmitAndReset();
-            return ImmutableArray.CreateRange(optimized);
+
+            // Eliminate no effect operations
+            IEnumerable<IOperation> eliminated = optimized.Where(op => !HasNoEffect(op));
+            return ImmutableArray.CreateRange(eliminated);
         }
 
         private static IOperation TryReduce(dynamic a, dynamic b) => _TryReduce(a, b);
@@ -116,6 +117,8 @@ namespace Brainfuck.Core
 
         private static IOperation _TryReduce(IWriteOperation a, Assign b)
         {
+            if (a is Read || a is DummyWriteOp)
+                return null;
             if (a.Dest == b.Dest)
                 return b;
             else
@@ -123,5 +126,22 @@ namespace Brainfuck.Core
         }
 
         #endregion
+
+        private static bool HasNoEffect(IOperation operation)
+        {
+            switch (operation)
+            {
+                case AddPtr op:
+                    return op.Value == 0;
+                case AddValue op:
+                    return op.Value == 0;
+                case MultAdd op:
+                    return op.Value == 0;
+                case DummyWriteOp op:
+                    return true;
+                default:
+                    return false;
+            }
+        }
     }
 }
