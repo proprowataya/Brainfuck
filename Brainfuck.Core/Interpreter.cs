@@ -55,7 +55,7 @@ namespace Brainfuck.Core
                 for (int i = 0; i < operations.Length; i++, step++)
                 {
                     token.ThrowIfCancellationRequested();
-                    OnStepStart?.Invoke(new OnStepStartEventArgs(step, i, ptr, new ArrayView<T>(buffer)));
+                    OnStepStart?.Invoke(new OnStepStartEventArgs(step, i, ptr, operations[i], new ArrayView<T>(buffer)));
 
                     EnsureIndex(ptr + operations[i].MaxAccessOffset);
 
@@ -141,13 +141,15 @@ namespace Brainfuck.Core
         public int Step { get; }
         public int Index { get; }
         public int Pointer { get; }
+        public IOperation Operation { get; }
         public IReadOnlyList<object> Buffer { get; }
 
-        public OnStepStartEventArgs(int step, int index, int pointer, IReadOnlyList<object> buffer)
+        public OnStepStartEventArgs(int step, int index, int pointer, IOperation operation, IReadOnlyList<object> buffer)
         {
             Step = step;
             Index = index;
             Pointer = pointer;
+            Operation = operation;
             Buffer = buffer;
         }
     }

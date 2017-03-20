@@ -170,7 +170,7 @@ namespace Brainfuck.Repl
 
         private static void PrintOnStepStartEventArgs(Brainfuck.Core.Program program, OnStepStartEventArgs args)
         {
-            Console.Write($"{args.Index,3}: {("[" + program.Operations[args.Index].ToString() + "]").PadRight(24)}");
+            Console.Write($"{args.Index,3}: {("[" + args.Operation.ToString() + "]").PadRight(24)}");
 
             Console.Write("Buffer = { ");
             for (int i = 0; i < args.Buffer.Count; i++)
