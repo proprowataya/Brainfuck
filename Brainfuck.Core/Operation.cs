@@ -16,6 +16,11 @@ namespace Brainfuck.Core
         MemoryLocation Dest { get; }
     }
 
+    internal interface IReadOperation : IOperation
+    {
+        MemoryLocation Src { get; }
+    }
+
     #region Operations
 
     public sealed class AddPtr : IOperation
@@ -29,6 +34,8 @@ namespace Brainfuck.Core
 
         public IOperation WithAddLocation(int delta) => this;
         public int MaxAccessOffset => 0;
+
+        public override string ToString() => $"{nameof(AddPtr)} {Value}";
     }
 
     public sealed class AddValue : IWriteOperation
@@ -44,9 +51,11 @@ namespace Brainfuck.Core
 
         public IOperation WithAddLocation(int delta) => new AddValue(Dest.WithAdd(delta), Value);
         public int MaxAccessOffset => Dest.Offset;
+
+        public override string ToString() => $"{nameof(AddValue)} {Dest}, {Value}";
     }
 
-    public sealed class MultAdd : IWriteOperation
+    public sealed class MultAdd : IReadOperation, IWriteOperation
     {
         public MemoryLocation Dest { get; }
         public MemoryLocation Src { get; }
@@ -61,6 +70,8 @@ namespace Brainfuck.Core
 
         public IOperation WithAddLocation(int delta) => new MultAdd(Dest.WithAdd(delta), Src.WithAdd(delta), Value);
         public int MaxAccessOffset => Math.Max(Dest.Offset, Src.Offset);
+
+        public override string ToString() => $"{nameof(MultAdd)} {Dest}, {Src}, {Value}";
     }
 
     public sealed class Assign : IWriteOperation
@@ -76,9 +87,11 @@ namespace Brainfuck.Core
 
         public IOperation WithAddLocation(int delta) => new Assign(Dest.WithAdd(delta), Value);
         public int MaxAccessOffset => Dest.Offset;
+
+        public override string ToString() => $"{nameof(Assign)} {Dest}, {Value}";
     }
 
-    public sealed class Put : IOperation
+    public sealed class Put : IReadOperation
     {
         public MemoryLocation Src { get; }
 
@@ -89,6 +102,8 @@ namespace Brainfuck.Core
 
         public IOperation WithAddLocation(int delta) => new Put(Src.WithAdd(delta));
         public int MaxAccessOffset => Src.Offset;
+
+        public override string ToString() => $"{nameof(Put)} {Src}";
     }
 
     public sealed class Read : IWriteOperation
@@ -102,6 +117,8 @@ namespace Brainfuck.Core
 
         public IOperation WithAddLocation(int delta) => new Read(Dest.WithAdd(delta));
         public int MaxAccessOffset => Dest.Offset;
+
+        public override string ToString() => $"{nameof(Read)} {Dest}";
     }
 
     public sealed class Roop : IOperation
@@ -115,9 +132,11 @@ namespace Brainfuck.Core
 
         public IOperation WithAddLocation(int delta) => this;
         public int MaxAccessOffset => 0;
+
+        public override string ToString() => $"{nameof(Roop)} Length: {Operations.Length}";
     }
 
-    public sealed class IfTrue : IOperation
+    public sealed class IfTrue : IReadOperation
     {
         public MemoryLocation Condition { get; }
         public ImmutableArray<IOperation> Operations { get; set; }
@@ -128,8 +147,11 @@ namespace Brainfuck.Core
             Operations = operations;
         }
 
-        public IOperation WithAddLocation(int delta) => this;
-        public int MaxAccessOffset => 0;
+        public IOperation WithAddLocation(int delta) => new IfTrue(Condition.WithAdd(delta), Operations);
+        public int MaxAccessOffset => Condition.Offset;
+
+        public override string ToString() => $"{nameof(IfTrue)} Length: {Operations.Length}";
+        MemoryLocation IReadOperation.Src => Condition;
     }
 
     public sealed class DummyWriteOp : IWriteOperation
@@ -140,7 +162,6 @@ namespace Brainfuck.Core
         {
             Dest = dest;
         }
-
 
         public IOperation WithAddLocation(int delta) => new DummyWriteOp(Dest.WithAdd(delta));
         public int MaxAccessOffset => Dest.Offset;
@@ -179,6 +200,11 @@ namespace Brainfuck.Core
         public override int GetHashCode()
         {
             return Offset.GetHashCode();
+        }
+
+        public override string ToString()
+        {
+            return Offset.ToString();
         }
     }
 }
