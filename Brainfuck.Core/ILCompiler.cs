@@ -278,7 +278,7 @@ namespace Brainfuck.Core
                         {
                             Label end = il.DefineLabel();
 
-                            LoadElement(buffer, ptr, null);
+                            LoadElement(buffer, ptr, op.Condition.Offset);
                             il.Emit(OpCodes.Brfalse, end);
                             EmitCore(op.Operations, buffer, ptr, emitReturnAtLast: false);
                             il.MarkLabel(end);
