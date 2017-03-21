@@ -56,7 +56,7 @@ namespace Brainfuck.Core
                 }
             }
 
-            return (builder.ToImmutable(), offset);
+            return (builder.ToImmutable(), offset - firstOffset);
         }
     }
 }
