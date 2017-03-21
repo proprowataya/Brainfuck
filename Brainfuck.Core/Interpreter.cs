@@ -16,23 +16,23 @@ namespace Brainfuck.Core
             Setting = setting;
         }
 
-        public void Execute(Program program, CancellationToken token = default(CancellationToken))
+        public void Execute(Module module, CancellationToken token = default(CancellationToken))
         {
             if (Setting.ElementType == typeof(Byte))
             {
-                Execute<UInt8, UInt8Operator>(program, token);
+                Execute<UInt8, UInt8Operator>(module, token);
             }
             else if (Setting.ElementType == typeof(Int16))
             {
-                Execute<Int16, Int16Operator>(program, token);
+                Execute<Int16, Int16Operator>(module, token);
             }
             else if (Setting.ElementType == typeof(Int32))
             {
-                Execute<Int32, Int32Operator>(program, token);
+                Execute<Int32, Int32Operator>(module, token);
             }
             else if (Setting.ElementType == typeof(Int64))
             {
-                Execute<Int64, Int64Operator>(program, token);
+                Execute<Int64, Int64Operator>(module, token);
             }
             else
             {
@@ -40,8 +40,10 @@ namespace Brainfuck.Core
             }
         }
 
-        private void Execute<T, TOperator>(Program program, CancellationToken token) where TOperator : IOperator<T>
+        private void Execute<T, TOperator>(Module module, CancellationToken token) where TOperator : IOperator<T>
         {
+            throw new NotImplementedException();
+#if false
             T[] buffer = new T[Setting.BufferSize];
             int ptr = 0;
             int step = 0;
@@ -126,6 +128,7 @@ namespace Brainfuck.Core
                     buffer = newBuffer;
                 }
             }
+#endif
         }
 
         private static int Read() => Console.Read();
@@ -141,15 +144,15 @@ namespace Brainfuck.Core
         public int Step { get; }
         public int Index { get; }
         public int Pointer { get; }
-        public IOperation Operation { get; }
+        //public IOperation Operation { get; }
         public IReadOnlyList<object> Buffer { get; }
 
-        public OnStepStartEventArgs(int step, int index, int pointer, IOperation operation, IReadOnlyList<object> buffer)
+        public OnStepStartEventArgs(int step, int index, int pointer, IReadOnlyList<object> buffer)
         {
             Step = step;
             Index = index;
             Pointer = pointer;
-            Operation = operation;
+            //Operation = operation;
             Buffer = buffer;
         }
     }

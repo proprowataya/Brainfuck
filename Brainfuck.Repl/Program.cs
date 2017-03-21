@@ -1,4 +1,5 @@
 ﻿using Brainfuck.Core;
+using Brainfuck.Core.Syntax;
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -40,52 +41,56 @@ namespace Brainfuck.Repl
         {
             while (ReadCode() is string source && source != "exit")
             {
-                Brainfuck.Core.Program program = ParseSource(source, command.Optimize);
+                Module module = ParseSource(source, command.Optimize);
+                Console.WriteLine(module.Root.ToProgramString());
+                Console.WriteLine();
 
-                RunByILUnsafeCompiler(program, setting, printHeader: true);
-                RunByILCompiler(program, setting, printHeader: true);
-                RunByInterpreter(program, setting, printHeader: true, stepExecution: command.StepExecution);
+                //RunByILUnsafeCompiler(module, setting, printHeader: true);
+                //RunByILCompiler(module, setting, printHeader: true);
+                //RunByInterpreter(module, setting, printHeader: true, stepExecution: command.StepExecution);
             }
         }
 
         private static void Execute(CommandLineArgument command, Setting setting)
         {
             string source = File.ReadAllText(command.FileName);
-            Brainfuck.Core.Program program = ParseSource(source, command.Optimize);
+            Module module = ParseSource(source, command.Optimize);
+            Console.WriteLine(module.Root.ToProgramString());
+            Console.WriteLine();
 
-            if (command.StepExecution)
-            {
-                RunByInterpreter(program, setting, printHeader: false, stepExecution: true);
-            }
-            else
-            {
-                RunByILUnsafeCompiler(program, setting, printHeader: false);
-            }
+            //if (command.StepExecution)
+            //{
+            //    RunByInterpreter(module, setting, printHeader: false, stepExecution: true);
+            //}
+            //else
+            //{
+            //    RunByILUnsafeCompiler(module, setting, printHeader: false);
+            //}
         }
 
         #region Runs
 
-        private static void RunByILUnsafeCompiler(Brainfuck.Core.Program program, Setting setting, bool printHeader)
+        private static void RunByILUnsafeCompiler(Module module, Setting setting, bool printHeader)
         {
             Run(() =>
             {
                 ILCompiler compiler = new ILCompiler(setting.WithUnsafeCode(true));
-                Action action = compiler.Compile(program);
+                Action action = compiler.Compile(module);
                 action();
             }, printHeader ? "===== Compiler (System.Reflection.Emit, unsafe) =====" : null);
         }
 
-        private static void RunByILCompiler(Brainfuck.Core.Program program, Setting setting, bool printHeader)
+        private static void RunByILCompiler(Module module, Setting setting, bool printHeader)
         {
             Run(() =>
             {
                 ILCompiler compiler = new ILCompiler(setting);
-                Action action = compiler.Compile(program);
+                Action action = compiler.Compile(module);
                 action();
             }, printHeader ? "===== Compiler (System.Reflection.Emit) =====" : null);
         }
 
-        private static void RunByInterpreter(Brainfuck.Core.Program program, Setting setting, bool printHeader, bool stepExecution)
+        private static void RunByInterpreter(Module module, Setting setting, bool printHeader, bool stepExecution)
         {
             Run(() =>
             {
@@ -101,7 +106,7 @@ namespace Brainfuck.Repl
                 {
                     interpreter.OnStepStart += arg =>
                     {
-                        PrintOnStepStartEventArgs(program, arg);
+                        PrintOnStepStartEventArgs(module, arg);
                         ConsoleKeyInfo key = Console.ReadKey();
 
                         if (key.Key == ConsoleKey.Escape)
@@ -113,7 +118,7 @@ namespace Brainfuck.Repl
 
                 try
                 {
-                    interpreter.Execute(program, cts.Token);
+                    interpreter.Execute(module, cts.Token);
                 }
                 catch (OperationCanceledException)
                 {
@@ -157,20 +162,20 @@ namespace Brainfuck.Repl
             return sb.ToString();
         }
 
-        private static Brainfuck.Core.Program ParseSource(string source, bool optimize)
+        private static Module ParseSource(string source, bool optimize)
         {
-            Brainfuck.Core.Program program = Parser.Parse(source);
+            Module module = Parser.Parse(source);
             if (optimize)
             {
-                program = program.Optimize();
+                module = module.Optimize();
             }
 
-            return program;
+            return module;
         }
 
-        private static void PrintOnStepStartEventArgs(Brainfuck.Core.Program program, OnStepStartEventArgs args)
+        private static void PrintOnStepStartEventArgs(Module module, OnStepStartEventArgs args)
         {
-            Console.Write($"{args.Index,3}: {("[" + args.Operation.ToString() + "]").PadRight(24)}");
+            Console.Write($"{args.Index,3}: {("[" + /* args.Operation.ToString() + */ "]").PadRight(24)}");
 
             Console.Write("Buffer = { ");
             for (int i = 0; i < args.Buffer.Count; i++)

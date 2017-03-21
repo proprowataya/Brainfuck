@@ -24,23 +24,26 @@ namespace Brainfuck.Core
             Setting = setting;
         }
 
-        public Action Compile(Program program)
+        public Action Compile(Module module)
         {
-            DynamicMethod method = new DynamicMethod(MethodName, null, null);
-            ILGenerator il = method.GetILGenerator();
-            new ILCompilerImplement(program, il, Setting).GenerateIL();
-            return (Action)method.CreateDelegate(typeof(Action));
+            //DynamicMethod method = new DynamicMethod(MethodName, null, null);
+            //ILGenerator il = method.GetILGenerator();
+            //new ILCompilerImplement(program, il, Setting).GenerateIL();
+            //return (Action)method.CreateDelegate(typeof(Action));
+            throw new NotImplementedException();
         }
 
-        public void CompileToIL(Program program, ILGenerator il)
+        public void CompileToIL(Module module, ILGenerator il)
         {
-            new ILCompilerImplement(program, il, Setting).GenerateIL();
+            //new ILCompilerImplement(program, il, Setting).GenerateIL();
+            throw new NotImplementedException();
         }
     }
 
+#if false
     internal struct ILCompilerImplement
     {
-        #region Constants
+    #region Constants
 
         private static readonly Dictionary<Type, OpCode> LdindTable = new Dictionary<Type, OpCode>()
         {
@@ -90,7 +93,7 @@ namespace Brainfuck.Core
             [typeof(Int64)] = 8,
         };
 
-        #endregion
+    #endregion
 
         private readonly Program program;
         private readonly ILGenerator il;
@@ -391,4 +394,5 @@ namespace Brainfuck.Core
 
         private int SizeOfElement => SizeTable[setting.ElementType];
     }
+#endif
 }

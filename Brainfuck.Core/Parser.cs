@@ -1,69 +1,64 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using Brainfuck.Core.Syntax;
 using System.Collections.Immutable;
-using System.Diagnostics;
 
 namespace Brainfuck.Core
 {
     public static class Parser
     {
-        public static Program Parse(string source)
+        public static Module Parse(string source)
         {
-            Stack<List<IOperation>> stack = new Stack<List<IOperation>>();
-            List<IOperation> list = new List<IOperation>();
+            int i = 0;
+            var t = ParseUnit(source, 0, ref i);
+            return new Module(source, new BlockUnit(t.statements, t.offsetChange));
+        }
 
-            stack.Push(list);
+        private static (ImmutableArray<IStatement> statements, int offsetChange) ParseUnit(string source, int offset, ref int i)
+        {
+            int firstOffset = offset;
+            var builder = ImmutableArray.CreateBuilder<IStatement>();
 
-            for (int i = 0; i < source.Length; i++)
+            for (; i < source.Length && source[i] != ']'; i++)
             {
                 switch (source[i])
                 {
                     case '>':
-                        list.Add(new AddPtr(1));
+                        offset++;
                         break;
                     case '<':
-                        list.Add(new AddPtr(-1));
+                        offset--;
                         break;
                     case '+':
-                        list.Add(new AddValue(MemoryLocation.Zero, 1));
+                        builder.Add(new AssignStatement(
+                                        new MemoryLocation(offset),
+                                        new AddExpression(new MemoryAccessExpression(new MemoryLocation(offset)), ConstExpression.One)));
                         break;
                     case '-':
-                        list.Add(new AddValue(MemoryLocation.Zero, -1));
+                        builder.Add(new AssignStatement(
+                                        new MemoryLocation(offset),
+                                        new AddExpression(new MemoryAccessExpression(new MemoryLocation(offset)), ConstExpression.MinusOne)));
                         break;
                     case '.':
-                        list.Add(new Put(MemoryLocation.Zero));
+                        builder.Add(new PutStatement(new MemoryAccessExpression(new MemoryLocation(offset))));
                         break;
                     case ',':
-                        list.Add(new Read(MemoryLocation.Zero));
+                        builder.Add(new AssignStatement(new MemoryLocation(offset), GetExpression.Instance));
                         break;
                     case '[':
                         {
-                            var newList = new List<IOperation>();
-                            stack.Push(newList);
-                            list = newList;
+                            i++; // '['
+                            var t = ParseUnit(source, offset, ref i);
+                            builder.Add(new RoopUnit(t.statements, t.offsetChange, new MemoryLocation(offset)));
                             break;
                         }
                     case ']':
-                        {
-                            stack.Pop();
-                            stack.Peek().Add(new Roop(ImmutableArray.CreateRange(list)));
-                            list = stack.Peek();
-                            break;
-                        }
+                    // Unreachable
                     default:
                         // Do nothing
                         break;
                 }
             }
 
-            if (stack.Count != 1)
-            {
-                // TODO
-                throw new InvalidOperationException();
-            }
-
-            Debug.Assert(stack.Peek() == list);
-            return new Program(source, ImmutableArray.CreateRange(list));
+            return (builder.ToImmutable(), offset - firstOffset);
         }
     }
 }
