@@ -24,17 +24,17 @@ namespace Brainfuck.Core
             Setting = setting;
         }
 
-        public Action Compile(Program program)
+        public Action Compile(Module module)
         {
             DynamicMethod method = new DynamicMethod(MethodName, null, null);
             ILGenerator il = method.GetILGenerator();
-            new ILCompilerImplement(program, il, Setting).GenerateIL();
+            new ILCompilerImplement(module, il, Setting).GenerateIL();
             return (Action)method.CreateDelegate(typeof(Action));
         }
 
-        public void CompileToIL(Program program, ILGenerator il)
+        public void CompileToIL(Module module, ILGenerator il)
         {
-            new ILCompilerImplement(program, il, Setting).GenerateIL();
+            new ILCompilerImplement(module, il, Setting).GenerateIL();
         }
     }
 
@@ -92,15 +92,15 @@ namespace Brainfuck.Core
 
         #endregion
 
-        private readonly Program program;
+        private readonly Module module;
         private readonly ILGenerator il;
         private readonly Setting setting;
 
-        private ImmutableArray<IOperation> Operations => program.Operations;
+        private ImmutableArray<IOperation> Operations => module.Operations;
 
-        public ILCompilerImplement(Program program, ILGenerator il, Setting setting)
+        public ILCompilerImplement(Module module, ILGenerator il, Setting setting)
         {
-            this.program = program;
+            this.module = module;
             this.il = il;
             this.setting = setting;
         }

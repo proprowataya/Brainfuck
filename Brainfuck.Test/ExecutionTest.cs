@@ -69,47 +69,47 @@ namespace Brainfuck.Test
 
         private static void TestAll(string code, string expected, string stdin = "")
         {
-            Program[] programs = { Parser.Parse(code), Optimizer.Optimize(Parser.Parse(code)) };
+            Module[] modules = { Parser.Parse(code), Optimizer.Optimize(Parser.Parse(code)) };
 
-            foreach (var program in programs)
+            foreach (var module in modules)
             {
                 foreach (var type in TestTypes)
                 {
-                    Assert.Equal(expected, RunTest(GetInterpreterAction(type), program, stdin));
+                    Assert.Equal(expected, RunTest(GetInterpreterAction(type), module, stdin));
 
                     foreach (var unsafeCode in new[] { true, false })
                     {
                         Setting setting = Setting.Default.WithElementType(type).WithUnsafeCode(unsafeCode);
-                        Assert.Equal(expected, RunTest(GetILCompilerAction(setting), program, stdin));
+                        Assert.Equal(expected, RunTest(GetILCompilerAction(setting), module, stdin));
                     }
                 }
             }
         }
 
-        private static string RunTest(Action<Program> action, Program program, string stdin)
+        private static string RunTest(Action<Module> action, Module module, string stdin)
         {
             using (var reader = new StringReader(stdin))
             using (var writer = new StringWriter())
             {
                 Console.SetIn(reader);
                 Console.SetOut(writer);
-                action(program);
+                action(module);
                 Console.Out.Flush();
                 return writer.ToString().TrimEnd();
             }
         }
 
-        private static Action<Program> GetInterpreterAction(Type elementType)
+        private static Action<Module> GetInterpreterAction(Type elementType)
         {
-            return program => new Interpreter(Setting.Default.WithElementType(elementType)).Execute(program);
+            return module => new Interpreter(Setting.Default.WithElementType(elementType)).Execute(module);
         }
 
-        private static Action<Program> GetILCompilerAction(Setting setting)
+        private static Action<Module> GetILCompilerAction(Setting setting)
         {
-            return program =>
+            return module =>
             {
                 ILCompiler compiler = new ILCompiler(setting);
-                Action action = compiler.Compile(program);
+                Action action = compiler.Compile(module);
                 action();
             };
         }

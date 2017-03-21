@@ -7,7 +7,7 @@ namespace Brainfuck.Core
 {
     public static class Parser
     {
-        public static Program Parse(string source)
+        public static Module Parse(string source)
         {
             Stack<List<IOperation>> stack = new Stack<List<IOperation>>();
             List<IOperation> list = new List<IOperation>();
@@ -63,7 +63,7 @@ namespace Brainfuck.Core
             }
 
             Debug.Assert(stack.Peek() == list);
-            return new Program(source, ImmutableArray.CreateRange(list));
+            return new Module(source, ImmutableArray.CreateRange(list));
         }
     }
 }

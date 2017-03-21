@@ -2,12 +2,12 @@
 
 namespace Brainfuck.Core
 {
-    public class Program
+    public class Module
     {
         public string Source { get; }
         public ImmutableArray<IOperation> Operations { get; }
 
-        internal Program(string source, ImmutableArray<IOperation> operations)
+        internal Module(string source, ImmutableArray<IOperation> operations)
         {
             Source = source;
             Operations = operations;

@@ -7,12 +7,12 @@ namespace Brainfuck.Core
 {
     public static class Optimizer
     {
-        public static Program Optimize(this Program program)
+        public static Module Optimize(this Module module)
         {
-            var operations = program.Operations;
+            var operations = module.Operations;
             operations = OptimizeRoopStep(operations);
             operations = OptimizeReduceStep(operations, 0, updateOffsetAtLast: true);
-            return new Program(program.Source, operations);
+            return new Module(module.Source, operations);
         }
 
         private static ImmutableArray<IOperation> OptimizeRoopStep(IReadOnlyList<IOperation> operations)
