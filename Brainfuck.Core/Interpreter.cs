@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Brainfuck.Core.Syntax;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -42,6 +43,8 @@ namespace Brainfuck.Core
 
         private void Execute<T, TOperator>(Module module, CancellationToken token) where TOperator : IOperator<T>
         {
+            throw new NotImplementedException();
+#if false
             T[] buffer = new T[Setting.BufferSize];
             int ptr = 0;
             int step = 0;
@@ -126,6 +129,7 @@ namespace Brainfuck.Core
                     buffer = newBuffer;
                 }
             }
+#endif
         }
 
         private static int Read() => Console.Read();
@@ -138,17 +142,15 @@ namespace Brainfuck.Core
 
     public sealed class OnStepStartEventArgs
     {
-        public int Step { get; }
-        public int Index { get; }
         public int Pointer { get; }
+        public long Step { get; }
         public IOperation Operation { get; }
         public IReadOnlyList<object> Buffer { get; }
 
-        public OnStepStartEventArgs(int step, int index, int pointer, IOperation operation, IReadOnlyList<object> buffer)
+        public OnStepStartEventArgs(int pointer, long step, IOperation operation, IReadOnlyList<object> buffer)
         {
-            Step = step;
-            Index = index;
             Pointer = pointer;
+            Step = step;
             Operation = operation;
             Buffer = buffer;
         }

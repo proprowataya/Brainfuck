@@ -40,18 +40,26 @@ namespace Brainfuck.Repl
         {
             while (ReadCode() is string source && source != "exit")
             {
-                Brainfuck.Core.Module module = ParseSource(source, command.Optimize);
+                try
+                {
+                    Module module = ParseSource(source, command.Optimize);
 
-                RunByILUnsafeCompiler(module, setting, printHeader: true);
-                RunByILCompiler(module, setting, printHeader: true);
-                RunByInterpreter(module, setting, printHeader: true, stepExecution: command.StepExecution);
+                    RunByILUnsafeCompiler(module, setting, printHeader: true);
+                    RunByILCompiler(module, setting, printHeader: true);
+                    RunByInterpreter(module, setting, printHeader: true, stepExecution: command.StepExecution);
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e.ToString());
+                    Console.WriteLine();
+                }
             }
         }
 
         private static void Execute(CommandLineArgument command, Setting setting)
         {
             string source = File.ReadAllText(command.FileName);
-            Brainfuck.Core.Module module = ParseSource(source, command.Optimize);
+            Module module = ParseSource(source, command.Optimize);
 
             if (command.StepExecution)
             {
@@ -65,7 +73,7 @@ namespace Brainfuck.Repl
 
         #region Runs
 
-        private static void RunByILUnsafeCompiler(Brainfuck.Core.Module module, Setting setting, bool printHeader)
+        private static void RunByILUnsafeCompiler(Module module, Setting setting, bool printHeader)
         {
             Run(() =>
             {
@@ -75,7 +83,7 @@ namespace Brainfuck.Repl
             }, printHeader ? "===== Compiler (System.Reflection.Emit, unsafe) =====" : null);
         }
 
-        private static void RunByILCompiler(Brainfuck.Core.Module module, Setting setting, bool printHeader)
+        private static void RunByILCompiler(Module module, Setting setting, bool printHeader)
         {
             Run(() =>
             {
@@ -85,7 +93,7 @@ namespace Brainfuck.Repl
             }, printHeader ? "===== Compiler (System.Reflection.Emit) =====" : null);
         }
 
-        private static void RunByInterpreter(Brainfuck.Core.Module module, Setting setting, bool printHeader, bool stepExecution)
+        private static void RunByInterpreter(Module module, Setting setting, bool printHeader, bool stepExecution)
         {
             Run(() =>
             {
@@ -122,21 +130,28 @@ namespace Brainfuck.Repl
             }, printHeader ? "===== Interpreter =====" : null);
         }
 
-        private static TimeSpan Run(Action action, string message)
+        private static void Run(Action action, string message)
         {
-            if (message != null)
+            try
             {
-                Console.WriteLine(message);
+                if (message != null)
+                {
+                    Console.WriteLine(message);
+                }
+
+                Stopwatch sw = Stopwatch.StartNew();
+                action();
+                sw.Stop();
+
+                Console.WriteLine();
+                Console.WriteLine($"Elapsed {sw.Elapsed}");
+                Console.WriteLine();
             }
-
-            Stopwatch sw = Stopwatch.StartNew();
-            action();
-            sw.Stop();
-
-            Console.WriteLine();
-            Console.WriteLine($"Elapsed {sw.Elapsed}");
-            Console.WriteLine();
-            return sw.Elapsed;
+            catch (Exception e)
+            {
+                Console.WriteLine(e.ToString());
+                Console.WriteLine();
+            }
         }
 
         #endregion
@@ -157,9 +172,9 @@ namespace Brainfuck.Repl
             return sb.ToString();
         }
 
-        private static Brainfuck.Core.Module ParseSource(string source, bool optimize)
+        private static Module ParseSource(string source, bool optimize)
         {
-            Brainfuck.Core.Module module = Parser.Parse(source);
+            Module module = Parser.Parse(source);
             if (optimize)
             {
                 module = module.Optimize();
@@ -168,9 +183,9 @@ namespace Brainfuck.Repl
             return module;
         }
 
-        private static void PrintOnStepStartEventArgs(Brainfuck.Core.Module module, OnStepStartEventArgs args)
+        private static void PrintOnStepStartEventArgs(Module module, OnStepStartEventArgs args)
         {
-            Console.Write($"{args.Index,3}: {("[" + args.Operation.ToString() + "]").PadRight(24)}");
+            Console.Write($"{args.Step,4}: {("[" + args.Operation + "]").PadRight(24)}");
 
             Console.Write("Buffer = { ");
             for (int i = 0; i < args.Buffer.Count; i++)

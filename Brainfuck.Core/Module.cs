@@ -1,16 +1,16 @@
-﻿using System.Collections.Immutable;
+﻿using Brainfuck.Core.Syntax;
 
 namespace Brainfuck.Core
 {
     public class Module
     {
         public string Source { get; }
-        public ImmutableArray<IOperation> Operations { get; }
+        public BlockUnitOperation Root { get; }
 
-        internal Module(string source, ImmutableArray<IOperation> operations)
+        internal Module(string source, BlockUnitOperation root)
         {
             Source = source;
-            Operations = operations;
+            Root = root;
         }
     }
 }

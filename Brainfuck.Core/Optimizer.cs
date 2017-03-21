@@ -7,6 +7,9 @@ namespace Brainfuck.Core
 {
     public static class Optimizer
     {
+        public static Module Optimize(this Module module) => module;
+
+#if false
         public static Module Optimize(this Module module)
         {
             var operations = module.Operations;
@@ -264,5 +267,6 @@ namespace Brainfuck.Core
                     return false;
             }
         }
+#endif
     }
 }

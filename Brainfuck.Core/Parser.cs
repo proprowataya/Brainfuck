@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Brainfuck.Core.Syntax;
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
@@ -9,61 +10,53 @@ namespace Brainfuck.Core
     {
         public static Module Parse(string source)
         {
-            Stack<List<IOperation>> stack = new Stack<List<IOperation>>();
-            List<IOperation> list = new List<IOperation>();
+            int i = 0;
+            var t = ParseUnit(source, 0, ref i);
+            return new Module(source, new BlockUnitOperation(t.operations, t.ptrChange));
+        }
 
-            stack.Push(list);
+        private static (ImmutableArray<IOperation> operations, int ptrChange) ParseUnit(string source, int firstOffset, ref int i)
+        {
+            int offset = firstOffset;
+            var builder = ImmutableArray.CreateBuilder<IOperation>();
 
-            for (int i = 0; i < source.Length; i++)
+            for (; i < source.Length && source[i] != ']'; i++)
             {
                 switch (source[i])
                 {
                     case '>':
-                        list.Add(new AddPtr(1));
+                        offset++;
                         break;
                     case '<':
-                        list.Add(new AddPtr(-1));
+                        offset--;
                         break;
                     case '+':
-                        list.Add(new AddValue(MemoryLocation.Zero, 1));
+                        builder.Add(new AddAssignOperation(new MemoryLocation(offset), 1));
                         break;
                     case '-':
-                        list.Add(new AddValue(MemoryLocation.Zero, -1));
+                        builder.Add(new AddAssignOperation(new MemoryLocation(offset), -1));
                         break;
                     case '.':
-                        list.Add(new Put(MemoryLocation.Zero));
+                        builder.Add(new PutOperation(new MemoryLocation(offset)));
                         break;
                     case ',':
-                        list.Add(new Read(MemoryLocation.Zero));
+                        builder.Add(new ReadOperation(new MemoryLocation(offset)));
                         break;
                     case '[':
                         {
-                            var newList = new List<IOperation>();
-                            stack.Push(newList);
-                            list = newList;
+                            i++; // '['
+                            var t = ParseUnit(source, offset, ref i);
+                            builder.Add(new RoopUnitOperation(t.operations, t.ptrChange, new MemoryLocation(offset)));
                             break;
                         }
-                    case ']':
-                        {
-                            stack.Pop();
-                            stack.Peek().Add(new Roop(ImmutableArray.CreateRange(list)));
-                            list = stack.Peek();
-                            break;
-                        }
+                    case ']':   // Unreachable
                     default:
                         // Do nothing
                         break;
                 }
             }
 
-            if (stack.Count != 1)
-            {
-                // TODO
-                throw new InvalidOperationException();
-            }
-
-            Debug.Assert(stack.Peek() == list);
-            return new Module(source, ImmutableArray.CreateRange(list));
+            return (builder.ToImmutable(), offset);
         }
     }
 }
