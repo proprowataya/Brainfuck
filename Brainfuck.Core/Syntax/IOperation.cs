@@ -104,7 +104,7 @@ namespace Brainfuck.Core.Syntax
 
     public sealed class AddPtrOperation : IOperation
     {
-        int Value { get; }
+        public int Value { get; }
 
         public AddPtrOperation(int value)
         {
