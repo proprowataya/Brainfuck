@@ -1,4 +1,5 @@
 ﻿using Brainfuck.Core;
+using Brainfuck.Core.Syntax;
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -43,6 +44,12 @@ namespace Brainfuck.Repl
                 try
                 {
                     Module module = ParseSource(source, command.Optimize);
+                    if (command.ShowPseudoCode)
+                    {
+                        Console.WriteLine("/***** Pseudo Code *****/");
+                        Console.WriteLine(module.ToPseudoCode());
+                        Console.WriteLine();
+                    }
 
                     RunByILUnsafeCompiler(module, setting, printHeader: true);
                     RunByILCompiler(module, setting, printHeader: true);
@@ -60,6 +67,13 @@ namespace Brainfuck.Repl
         {
             string source = File.ReadAllText(command.FileName);
             Module module = ParseSource(source, command.Optimize);
+            if (command.ShowPseudoCode)
+            {
+                Console.WriteLine("/***** Pseudo Code *****/");
+                Console.WriteLine(module.ToPseudoCode());
+                Console.WriteLine();
+                return; // Don't execude code
+            }
 
             if (command.StepExecution)
             {
@@ -213,6 +227,7 @@ namespace Brainfuck.Repl
             public bool Optimize { get; } = true;
             public bool Help { get; } = false;
             public bool StepExecution { get; } = false;
+            public bool ShowPseudoCode { get; } = true;
 
             public static CommandLineArgument Parse(string[] args, out Setting setting)
             {
