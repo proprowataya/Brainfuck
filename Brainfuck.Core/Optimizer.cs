@@ -1,13 +1,128 @@
-﻿using System;
+﻿using Brainfuck.Core.Syntax;
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Linq;
 
 namespace Brainfuck.Core
 {
     public static class Optimizer
     {
-        public static Module Optimize(this Module module) => module;
+        public static Module Optimize(this Module module)
+        {
+            IReadOnlyList<IOperation> operations = module.Root.Operations;
+            operations = OptimizeReduceStep(operations);
+            return new Module(module.Source, new BlockUnitOperation(operations.ToImmutableArray(), module.Root.PtrChange));
+        }
+
+        private static IReadOnlyList<IOperation> OptimizeReduceStep(IReadOnlyList<IOperation> operations)
+        {
+            var list = new List<(int id, IOperation operation)>();
+            var lastWrites = new Dictionary<MemoryLocation, (int id, IOperation operation)>();
+            int nextID = 0;
+            void Add(IOperation operation) => list.Add((nextID++, operation));
+
+            for (int i = 0; i < operations.Count; i++)
+            {
+                IOperation op = operations[i];
+                Debug.Assert(!(op is AddPtrOperation));
+
+                if (op is IfTrueUnitOperation iftrue)
+                {
+                    // Recursive optimize
+                    var optimized = OptimizeReduceStep(iftrue.Operations);
+                    Add(new IfTrueUnitOperation(optimized.ToImmutableArray(), iftrue.PtrChange, iftrue.Src));
+                }
+                else if (op is RoopUnitOperation roop)
+                {
+                    // Recursive optimize
+                    var optimized = OptimizeReduceStep(roop.Operations);
+                    Add(new RoopUnitOperation(optimized.ToImmutableArray(), roop.PtrChange, roop.Src));
+
+                    // Prevent further reduce
+                    lastWrites.Clear();
+                }
+                else if (op is IWriteOperation write)
+                {
+                    // Find a candidate to be reduced with 'op'
+                    lastWrites.TryGetValue(write.Dest, out var lastReducable);
+
+                    // If the candidate was found and can be reducable
+                    if (lastReducable.operation != null)
+                    {
+                        var reduced = TryReduce(lastReducable.operation, write);
+                        if (reduced != null)
+                        {
+                            list.RemoveAll(t => t.id == lastReducable.id);
+                            Add(reduced);
+                        }
+                        else
+                        {
+                            Add(reduced);
+                        }
+                    }
+                    else
+                    {
+                        Add(op);
+                    }
+                }
+                else
+                {
+                    Add(op);
+                }
+
+                // Update lastWrites
+                if (list.Last().operation is IWriteOperation iwrite)
+                {
+                    lastWrites[iwrite.Dest] = list.Last();
+                }
+
+                // If this operation reads some memory locations,
+                // we must not to reduce currently existing opeations which write to the locations.
+                {
+                    if (list.Last().operation is IReadOperation iread)
+                    {
+                        lastWrites.Remove(iread.Src);
+                    }
+
+                    if (list.Last().operation is IUnitOperation iunit)
+                    {
+                        foreach (var item in iunit.Operations.OfType<IReadOperation>())
+                        {
+                            lastWrites.Remove(item.Src);
+                        }
+                    }
+                }
+            }
+
+            return list.Select(t => t.operation).ToArray();
+        }
+
+        private static IOperation TryReduce(IOperation a, IOperation b)
+        {
+            var type = (a.GetType(), b.GetType());
+
+            if (a is IWriteOperation wa && b is IWriteOperation wb && wa.Dest == wb.Dest)
+            {
+                MemoryLocation dest = wa.Dest;
+
+                if (a is AddAssignOperation addA && b is AddAssignOperation addB)
+                {
+                    return new AddAssignOperation(dest, addA.Value + addB.Value);
+                }
+                else if (a is AssignOperation assignA && b is AddAssignOperation add)
+                {
+                    return new AssignOperation(dest, assignA.Value + add.Value);
+                }
+                else if (a is IWriteOperation && !(a is ReadOperation) && b is AssignOperation assignB)
+                {
+                    return assignB;
+                }
+            }
+
+            return null;
+        }
 
 #if false
         public static Module Optimize(this Module module)
