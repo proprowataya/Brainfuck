@@ -28,6 +28,7 @@ namespace Brainfuck.Core.Syntax
         ImmutableArray<IOperation> Operations { get; }
         int PtrChange { get; }
         IUnitOperation WithOperations(ImmutableArray<IOperation> newOperations);
+        IUnitOperation WithPtrChange(int newPtrChange);
     }
 
     internal interface IAssignOperation : IWriteOperation
@@ -53,6 +54,8 @@ namespace Brainfuck.Core.Syntax
             new BlockUnitOperation(Operations.Select(o => o.WithAdd(delta)).ToImmutableArray(), PtrChange);
         public IUnitOperation WithOperations(ImmutableArray<IOperation> newOperations) =>
             new BlockUnitOperation(newOperations, PtrChange);
+        public IUnitOperation WithPtrChange(int newPtrChange)
+            => new BlockUnitOperation(Operations, newPtrChange);
         public void Accept(IVisitor visitor) => visitor.Visit(this);
         public T Accept<T>(IVisitor<T> visitor) => visitor.Visit(this);
     }
@@ -77,6 +80,8 @@ namespace Brainfuck.Core.Syntax
             new IfTrueUnitOperation(Operations.Select(o => o.WithAdd(delta)).ToImmutableArray(), PtrChange, Src.WithAdd(delta));
         public IUnitOperation WithOperations(ImmutableArray<IOperation> newOperations) =>
             new IfTrueUnitOperation(newOperations, PtrChange, Src);
+        public IUnitOperation WithPtrChange(int newPtrChange)
+            => new IfTrueUnitOperation(Operations, newPtrChange, Src);
         public void Accept(IVisitor visitor) => visitor.Visit(this);
         public T Accept<T>(IVisitor<T> visitor) => visitor.Visit(this);
     }
@@ -101,6 +106,8 @@ namespace Brainfuck.Core.Syntax
             new RoopUnitOperation(Operations.Select(o => o.WithAdd(delta)).ToImmutableArray(), PtrChange, Src.WithAdd(delta));
         public IUnitOperation WithOperations(ImmutableArray<IOperation> newOperations) =>
             new RoopUnitOperation(newOperations, PtrChange, Src);
+        public IUnitOperation WithPtrChange(int newPtrChange)
+            => new RoopUnitOperation(Operations, newPtrChange, Src);
         public void Accept(IVisitor visitor) => visitor.Visit(this);
         public T Accept<T>(IVisitor<T> visitor) => visitor.Visit(this);
     }
