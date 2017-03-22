@@ -43,93 +43,95 @@ namespace Brainfuck.Core
 
         private void Execute<T, TOperator>(Module module, CancellationToken token) where TOperator : IOperator<T>
         {
-            throw new NotImplementedException();
-#if false
-            T[] buffer = new T[Setting.BufferSize];
-            int ptr = 0;
-            int step = 0;
+            var visitor = new InterpreterImplement<T, TOperator>(this, module, token);
+            module.Root.Accept(visitor);
+        }
 
-            ExecuteCore(module.Operations);
+        private class InterpreterImplement<T, TOperator> : IVisitor where TOperator : IOperator<T>
+        {
+            private readonly Interpreter parent;
+            private readonly Module module;
+            private readonly CancellationToken token;
+            private T[] buffer;
+            private int ptr;
+            private long step;
 
-            void ExecuteCore(ImmutableArray<IOperation> operations)
+            public InterpreterImplement(Interpreter parent, Module module, CancellationToken token)
+            {
+                this.parent = parent;
+                this.module = module;
+                this.token = token;
+                this.buffer = new T[parent.Setting.BufferSize];
+                this.ptr = 0;
+                this.step = 0;
+            }
+
+            public (T[] buffer, int ptr, long step) GetState() => (buffer, ptr, step);
+
+            public void Visit(BlockUnitOperation op)
+            {
+                ExecuteOperations(op.Operations, op.PtrChange);
+            }
+
+            public void Visit(IfTrueUnitOperation op)
+            {
+                if (default(TOperator).IsNotZero(buffer[ptr + op.Src.Offset]))
+                {
+                    ExecuteOperations(op.Operations, op.PtrChange);
+                }
+            }
+
+            public void Visit(RoopUnitOperation op)
+            {
+                while (default(TOperator).IsNotZero(buffer[ptr + op.Src.Offset]))
+                {
+                    ExecuteOperations(op.Operations, op.PtrChange);
+                }
+            }
+
+            private void ExecuteOperations(ImmutableArray<IOperation> operations, int ptrChange)
+            {
+                for (int i = 0; i < operations.Length; i++)
+                {
+                    operations[i].Accept(this);
+                }
+
+                ptr += ptrChange;
+            }
+
+            public void Visit(AddPtrOperation op)
+            {
+                ptr += op.Value;
+            }
+
+            public void Visit(AssignOperation op)
+            {
+                buffer[ptr + op.Dest.Offset] = default(TOperator).FromInt(op.Value);
+            }
+
+            public void Visit(AddAssignOperation op)
+            {
+                ref T dest = ref buffer[ptr + op.Dest.Offset];
+                dest = default(TOperator).Add(dest, op.Value);
+            }
+
+            public void Visit(MultAddAssignOperation op)
             {
                 TOperator top = default(TOperator);
-
-                for (int i = 0; i < operations.Length; i++, step++)
-                {
-                    token.ThrowIfCancellationRequested();
-                    OnStepStart?.Invoke(new OnStepStartEventArgs(step, i, ptr, operations[i], new ArrayView<T>(buffer)));
-
-                    EnsureIndex(ptr + operations[i].MaxAccessOffset);
-
-                    switch (operations[i])
-                    {
-                        case AddPtr op:
-                            {
-                                ptr += op.Value;
-                            }
-                            break;
-                        case AddValue op:
-                            {
-                                ref T dest = ref buffer[ptr + op.Dest.Offset];
-                                dest = top.Add(dest, op.Value);
-                            }
-                            break;
-                        case MultAdd op:
-                            {
-                                ref T src = ref buffer[ptr + op.Src.Offset];
-                                ref T dest = ref buffer[ptr + op.Dest.Offset];
-                                dest = top.Add(dest, top.Mult(src, op.Value));
-                            }
-                            break;
-                        case Assign op:
-                            {
-                                buffer[ptr + op.Dest.Offset] = top.FromInt(op.Value);
-                            }
-                            break;
-                        case Put op:
-                            {
-                                Put(top.ToChar(buffer[ptr + op.Src.Offset]));
-                            }
-                            break;
-                        case Read op:
-                            {
-                                buffer[ptr + op.Dest.Offset] = top.FromInt(Read());
-                            }
-                            break;
-                        case Roop op:
-                            {
-                                while (top.IsNotZero(buffer[ptr]))
-                                {
-                                    ExecuteCore(op.Operations);
-                                }
-                            }
-                            break;
-                        case IfTrue op:
-                            {
-                                if (top.IsNotZero(buffer[ptr + op.Condition.Offset]))
-                                {
-                                    ExecuteCore(op.Operations);
-                                }
-                            }
-                            break;
-                        default:
-                            throw new InvalidOperationException();
-                    }
-                }
+                ref T src = ref buffer[ptr + op.Src.Offset];
+                ref T dest = ref buffer[ptr + op.Dest.Offset];
+                dest = top.Add(dest, top.Mult(src, op.Value));
             }
 
-            void EnsureIndex(int index)
+            public void Visit(PutOperation op)
             {
-                if (index >= buffer.Length)
-                {
-                    int newSize = Math.Max(buffer.Length * 2, index + 1);
-                    T[] newBuffer = new T[newSize];
-                    Array.Copy(buffer, newBuffer, buffer.Length);
-                    buffer = newBuffer;
-                }
+                Put(default(TOperator).ToChar(buffer[ptr + op.Src.Offset]));
             }
-#endif
+
+            public void Visit(ReadOperation op)
+            {
+                buffer[ptr + op.Dest.Offset] = default(TOperator).FromInt(Read());
+            }
         }
 
         private static int Read() => Console.Read();
