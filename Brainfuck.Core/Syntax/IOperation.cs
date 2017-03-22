@@ -157,14 +157,14 @@ namespace Brainfuck.Core.Syntax
 
     public sealed class MultAddAssignOperation : IAssignOperation, IReadOperation
     {
-        public MemoryLocation Src { get; }
         public MemoryLocation Dest { get; }
+        public MemoryLocation Src { get; }
         public int Value { get; }
 
-        public MultAddAssignOperation(MemoryLocation dest, int value)
+        public MultAddAssignOperation(MemoryLocation dest, MemoryLocation src, int value)
         {
-            Src = Src;
             Dest = dest;
+            Src = src;
             Value = value;
         }
 
