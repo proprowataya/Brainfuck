@@ -28,17 +28,11 @@ namespace Brainfuck.Core
                 IOperation op = operations[i];
                 Debug.Assert(!(op is AddPtrOperation));
 
-                if (op is IfTrueUnitOperation iftrue)
+                if (op is IUnitOperation unit)
                 {
                     // Recursive optimize
-                    var optimized = OptimizeReduceStep(iftrue.Operations);
-                    Add(new IfTrueUnitOperation(optimized.ToImmutableArray(), iftrue.PtrChange, iftrue.Src));
-                }
-                else if (op is RoopUnitOperation roop)
-                {
-                    // Recursive optimize
-                    var optimized = OptimizeReduceStep(roop.Operations);
-                    Add(new RoopUnitOperation(optimized.ToImmutableArray(), roop.PtrChange, roop.Src));
+                    var optimized = OptimizeReduceStep(unit.Operations);
+                    Add(unit.WithOperations(optimized.ToImmutableArray()));
 
                     // Prevent further reduce
                     lastWrites.Clear();
