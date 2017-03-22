@@ -21,7 +21,7 @@ namespace Brainfuck.Core
         {
             if (Setting.ElementType == typeof(Byte))
             {
-                Execute<UInt8, UInt8Operator>(module, token);
+                Execute<Byte, ByteOperator>(module, token);
             }
             else if (Setting.ElementType == typeof(Int16))
             {
@@ -197,15 +197,15 @@ namespace Brainfuck.Core
         char ToChar(T value);
     }
 
-    internal struct UInt8Operator : IOperator<UInt8>
+    internal struct ByteOperator : IOperator<Byte>
     {
-        public UInt8 Add(UInt8 a, int b) => new UInt8((byte)(a.Value + b));
-        public UInt8 Add(UInt8 a, UInt8 b) => (UInt8)(a + b);
-        public UInt8 Mult(UInt8 a, int b) => (UInt8)(a.Value * b);
-        public bool IsZero(UInt8 value) => value == 0;
-        public bool IsNotZero(UInt8 value) => value != 0;
-        public UInt8 FromInt(int value) => (UInt8)value;
-        public char ToChar(UInt8 value) => (char)value;
+        public Byte Add(Byte a, int b) => (Byte)(a + b);
+        public Byte Add(Byte a, Byte b) => (Byte)(a + b);
+        public Byte Mult(Byte a, int b) => (Byte)(a * b);
+        public bool IsZero(Byte value) => value == 0;
+        public bool IsNotZero(Byte value) => value != 0;
+        public Byte FromInt(int value) => (Byte)value;
+        public char ToChar(Byte value) => (char)value;
     }
 
     internal struct Int16Operator : IOperator<Int16>
