@@ -41,13 +41,13 @@ namespace Brainfuck.Core
             }
         }
 
-        private void Execute<T, TOperator>(Module module, CancellationToken token) where TOperator : IOperator<T>
+        private void Execute<T, TOperator>(Module module, CancellationToken token) where TOperator : IIntOperator<T>
         {
             var visitor = new InterpreterImplement<T, TOperator>(this, module, token);
             module.Root.Accept(visitor);
         }
 
-        private class InterpreterImplement<T, TOperator> : IVisitor where TOperator : IOperator<T>
+        private class InterpreterImplement<T, TOperator> : IVisitor where TOperator : IIntOperator<T>
         {
             private readonly Interpreter parent;
             private readonly Module module;
@@ -186,7 +186,7 @@ namespace Brainfuck.Core
 
     #region Operator
 
-    internal interface IOperator<T>
+    internal interface IIntOperator<T>
     {
         T Add(T a, int b);
         T Add(T a, T b);
@@ -197,7 +197,7 @@ namespace Brainfuck.Core
         char ToChar(T value);
     }
 
-    internal struct ByteOperator : IOperator<Byte>
+    internal struct ByteOperator : IIntOperator<Byte>
     {
         public Byte Add(Byte a, int b) => (Byte)(a + b);
         public Byte Add(Byte a, Byte b) => (Byte)(a + b);
@@ -208,7 +208,7 @@ namespace Brainfuck.Core
         public char ToChar(Byte value) => (char)value;
     }
 
-    internal struct Int16Operator : IOperator<Int16>
+    internal struct Int16Operator : IIntOperator<Int16>
     {
         public Int16 Add(Int16 a, int b) => (Int16)(a + b);
         public Int16 Add(Int16 a, Int16 b) => (Int16)(a + b);
@@ -219,7 +219,7 @@ namespace Brainfuck.Core
         public char ToChar(Int16 value) => (char)value;
     }
 
-    internal struct Int32Operator : IOperator<Int32>
+    internal struct Int32Operator : IIntOperator<Int32>
     {
         public Int32 Add(Int32 a, int b) => (Int32)(a + b);
         public Int32 Mult(Int32 a, int b) => (Int32)(a * b);
@@ -229,7 +229,7 @@ namespace Brainfuck.Core
         public char ToChar(Int32 value) => (char)value;
     }
 
-    internal struct Int64Operator : IOperator<Int64>
+    internal struct Int64Operator : IIntOperator<Int64>
     {
         public Int64 Add(Int64 a, int b) => (Int64)(a + b);
         public Int64 Add(Int64 a, Int64 b) => (Int64)(a + b);
