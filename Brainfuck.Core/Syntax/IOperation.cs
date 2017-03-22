@@ -27,6 +27,7 @@ namespace Brainfuck.Core.Syntax
     {
         ImmutableArray<IOperation> Operations { get; }
         int PtrChange { get; }
+        IUnitOperation WithOperations(ImmutableArray<IOperation> newOperations);
     }
 
     internal interface IAssignOperation : IWriteOperation
@@ -50,6 +51,8 @@ namespace Brainfuck.Core.Syntax
 
         public IOperation WithAdd(int delta) =>
             new BlockUnitOperation(Operations.Select(o => o.WithAdd(delta)).ToImmutableArray(), PtrChange);
+        public IUnitOperation WithOperations(ImmutableArray<IOperation> newOperations) =>
+            new BlockUnitOperation(newOperations, PtrChange);
         public void Accept(IVisitor visitor) => visitor.Visit(this);
         public T Accept<T>(IVisitor<T> visitor) => visitor.Visit(this);
     }
@@ -72,6 +75,8 @@ namespace Brainfuck.Core.Syntax
 
         public IOperation WithAdd(int delta) =>
             new IfTrueUnitOperation(Operations.Select(o => o.WithAdd(delta)).ToImmutableArray(), PtrChange, Src.WithAdd(delta));
+        public IUnitOperation WithOperations(ImmutableArray<IOperation> newOperations) =>
+            new IfTrueUnitOperation(newOperations, PtrChange, Src);
         public void Accept(IVisitor visitor) => visitor.Visit(this);
         public T Accept<T>(IVisitor<T> visitor) => visitor.Visit(this);
     }
@@ -94,6 +99,8 @@ namespace Brainfuck.Core.Syntax
 
         public IOperation WithAdd(int delta) =>
             new RoopUnitOperation(Operations.Select(o => o.WithAdd(delta)).ToImmutableArray(), PtrChange, Src.WithAdd(delta));
+        public IUnitOperation WithOperations(ImmutableArray<IOperation> newOperations) =>
+            new RoopUnitOperation(newOperations, PtrChange, Src);
         public void Accept(IVisitor visitor) => visitor.Visit(this);
         public T Accept<T>(IVisitor<T> visitor) => visitor.Visit(this);
     }
