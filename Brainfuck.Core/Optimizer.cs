@@ -53,7 +53,7 @@ namespace Brainfuck.Core
                         }
                         else
                         {
-                            Add(reduced);
+                            Add(op);
                         }
                     }
                     else
