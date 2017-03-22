@@ -168,7 +168,7 @@ namespace Brainfuck.Core.Syntax
             Value = value;
         }
 
-        public IOperation WithAdd(int delta) => new AssignOperation(Dest.WithAdd(delta), Value);
+        public IOperation WithAdd(int delta) => new MultAddAssignOperation(Dest.WithAdd(delta), Src.WithAdd(delta), Value);
         public void Accept(IVisitor visitor) => visitor.Visit(this);
         public T Accept<T>(IVisitor<T> visitor) => visitor.Visit(this);
     }
