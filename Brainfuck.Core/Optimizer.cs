@@ -11,7 +11,7 @@ namespace Brainfuck.Core
     {
         #region Constants
 
-        private const int LocationDiffOptimizationThreshold = 4;
+        private const int LocationDiffOptimizationThreshold = 1;
 
         #endregion
 
