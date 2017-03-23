@@ -1,187 +1,323 @@
-﻿using System;
+﻿using Brainfuck.Core.Syntax;
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Linq;
 
 namespace Brainfuck.Core
 {
     public static class Optimizer
     {
-        public static Program Optimize(this Program program) => new OptimizerImplement(program).Optimize();
-    }
+        #region Constants
 
-    internal struct OptimizerImplement
-    {
-        #region Fields And Property
-
-        private readonly Program program;
-        private readonly ImmutableArray<Operation>.Builder operations;
-        private readonly Dictionary<int, int> map;
-
-        private ImmutableArray<Operation> Operations => program.Operations;
+        private const int LocationDiffOptimizationThreshold = 1;
 
         #endregion
 
-        public OptimizerImplement(Program program)
+        public static Module Optimize(this Module module)
         {
-            this.program = program;
-            this.operations = ImmutableArray.CreateBuilder<Operation>();
-            this.map = new Dictionary<int, int>();
+            IReadOnlyList<IOperation> operations = module.Root.Operations;
+            int ptrChange = module.Root.PtrChange;
+            operations = OptimizeRoopStep(operations);
+            operations = OptimizeReduceStep(operations);
+            (operations, ptrChange) = OptimizePtrChangeStep(operations, ptrChange);
+            return new Module(module.Source, new BlockUnitOperation(operations.ToImmutableArray(), ptrChange));
         }
 
-        public Program Optimize()
+        private static IReadOnlyList<IOperation> OptimizeRoopStep(IReadOnlyList<IOperation> operations)
         {
-            for (int i = 0; i < Operations.Length; i++)
+            var list = new List<IOperation>();
+
+            foreach (var op in operations)
             {
-                Operation operation = Operations[i];
-                if (operation.Opcode == Opcode.Unknown)
+                if (op is IUnitOperation unit)
                 {
-                    continue;
-                }
-
-                if (operation.Opcode == Opcode.OpeningBracket)
-                {
-                    if (TryOptimizeSimpleRoop(i))
+                    IReadOnlyList<IOperation> optimized = null;
+                    if (op is RoopUnitOperation roop)
                     {
-                        i = Operations[i].Value;
-                        continue;
-                    }
-                }
-
-                if (IsReducible(operation.Opcode))
-                {
-                    // If possible, we reduce operation
-                    if (GetLast()?.Opcode == operation.Opcode)
-                    {
-                        Operation last = RemoveLast();
-                        operation = new Operation(operation.Opcode, last.Value + operation.Value);
-                    }
-
-                    if (operation.Value == 0)
-                    {
-                        // This operation has no effect, so we ignore it
-                        continue;
-                    }
-                }
-                else if (operation.Opcode == Opcode.ClosingBracket
-                            && GetLast()?.Opcode == Opcode.ClosingBracket)
-                {
-                    // Successive closing brackets (']') can be reduced
-                    map.Add(i, operations.Count - 1);
-                    continue;
-                }
-
-                AddOperation(operation, i);
-            }
-
-            CorrectJumpAddresses();
-
-            return new Program(program.Source, operations.ToImmutable());
-        }
-
-        private bool TryOptimizeSimpleRoop(int startIndex)
-        {
-            int endIndex = Operations[startIndex].Value;
-            var deltas = new Dictionary<int, int>() { [0] = 0 };
-            int offset = 0;
-
-            for (int i = startIndex + 1; i < endIndex; i++)
-            {
-                switch (Operations[i].Opcode)
-                {
-                    case Opcode.AddPtr:
-                        offset += Operations[i].Value;
-                        break;
-                    case Opcode.AddValue:
-                        if (!deltas.ContainsKey(offset))
+                        optimized = TryOptimizeRoop(roop);
+                        if (optimized != null)
                         {
-                            deltas[offset] = 0;
+                            list.AddRange(optimized);
                         }
-                        deltas[offset] += Operations[i].Value;
-                        break;
-                    case Opcode.Unknown:
-                        continue;
-                    default:
-                        // We can't optimize this roop
-                        return false;
+                    }
+
+                    if (optimized == null)
+                    {
+                        // Recursive optimize
+                        IUnitOperation newUnit = unit.WithOperations(OptimizeRoopStep(unit.Operations).ToImmutableArray());
+                        list.Add(newUnit);
+                    }
+                }
+                else
+                {
+                    list.Add(op);
                 }
             }
 
-            if (offset != 0 || deltas[0] != -1)
+            return list;
+        }
+
+        private static IReadOnlyList<IOperation> TryOptimizeRoop(RoopUnitOperation roop)
+        {
+            if (roop.PtrChange != 0)
             {
-                return false;
+                // If this roop changes ptr, we can't optimize this
+                return null;
             }
 
-            // Generate optimized code
+            int origin = roop.Src.Offset;
+            var deltas = new Dictionary<int, int>() { [origin] = 0 };
 
-            if (deltas.Where(p => p.Key < 0).Any())
+            void EnsureKey(int key)
+            {
+                if (!deltas.ContainsKey(key))
+                    deltas[key] = 0;
+            }
+
+            foreach (var op in roop.Operations)
+            {
+                if (op is AddAssignOperation add)
+                {
+                    EnsureKey(add.Dest.Offset);
+                    deltas[add.Dest.Offset] += add.Value;
+                }
+                else
+                {
+                    // We can't optimize this roop
+                    return null;
+                }
+            }
+
+            if (deltas[origin] != -1)
+            {
+                return null;
+            }
+
+            var optimized = new List<IOperation>();
+
+            foreach (var p in deltas.Where(p => p.Key != origin))
+            {
+                // buffer[ptr + p.Key] += buffer[ptr] * p.Value
+                optimized.Add(new MultAddAssignOperation(new MemoryLocation(p.Key), new MemoryLocation(origin), p.Value));
+            }
+
+            // buffer[ptr] = 0
+            optimized.Add(new AssignOperation(new MemoryLocation(origin), 0));
+
+            if (deltas.Where(p => p.Key < origin).Any())
             {
                 // There are some accesses to buffer[ptr + x] where x < 0.
                 // Such accesses sometimes cause out of range access.
                 // So we have to make sure that buffer[ptr] != 0.
 
                 // if (buffer[ptr] == 0) { goto `]`; }
-                AddCreatedOperation(new Operation(Opcode.BrZero, endIndex));
+                var iftrue = new IfTrueUnitOperation(optimized.ToImmutableArray(), 0, new MemoryLocation(origin));
+                optimized.Clear();
+                optimized.Add(iftrue);
             }
 
-            foreach (var p in deltas.Where(p => p.Key != 0))
-            {
-                // buffer[ptr + p.Key] += buffer[ptr] * p.Value
-                AddCreatedOperation(new Operation(Opcode.MultAdd, p.Key, p.Value));
-            }
-
-            // buffer[ptr] = 0
-            AddCreatedOperation(new Operation(Opcode.Assign, 0, 0));
-
-            // We have to update address map manually
-            map.Add(endIndex, operations.Count - 1);
-
-            return true;
+            return optimized;
         }
 
-        private void AddOperation(Operation operation, int index)
+        private static IReadOnlyList<IOperation> OptimizeReduceStep(IReadOnlyList<IOperation> operations)
         {
-            map.Add(index, operations.Count);   // Update address map
-            operations.Add(operation);
-        }
+            // Optimized operations.
+            // ID is used to identify which elenent we remove.
+            var list = new List<(int id, IOperation operation)>();
 
-        private void AddCreatedOperation(Operation operation)
-        {
-            operations.Add(operation);
-        }
+            // Candidates to be reduced.
+            // candidates[location] is an operation which writes to the location,
+            // and it can be reduced by further operation.
+            var candidates = new Dictionary<MemoryLocation, (int id, IOperation operation)>();
 
-        private void CorrectJumpAddresses()
-        {
+            int nextID = 0;
+            void Add(IOperation operation) => list.Add((nextID++, operation));
+
             for (int i = 0; i < operations.Count; i++)
             {
-                switch (operations[i].Opcode)
+                IOperation op = operations[i];
+                Debug.Assert(!(op is AddPtrOperation));
+
+                if (op is IUnitOperation unit)
                 {
-                    case Opcode.BrZero:
-                    case Opcode.OpeningBracket:
-                    case Opcode.ClosingBracket:
-                        operations[i] = new Operation(operations[i].Opcode, map[operations[i].Value]);
-                        break;
+                    // Recursive optimize
+                    var optimized = OptimizeReduceStep(unit.Operations);
+                    Add(unit.WithOperations(optimized.ToImmutableArray()));
+
+                    // Prevent further reduce
+                    candidates.Clear();
                 }
+                else if (op is IWriteOperation write)
+                {
+                    // Find a candidate to be reduced with 'op'
+                    candidates.TryGetValue(write.Dest, out var candidate);
+
+                    // If the candidate was found and can be reducable
+                    if (candidate.operation != null)
+                    {
+                        var reduced = TryReduce(candidate.operation, write);
+                        if (reduced != null)
+                        {
+                            list.RemoveAll(t => t.id == candidate.id);
+                            Add(reduced);
+                        }
+                        else
+                        {
+                            Add(op);
+                        }
+                    }
+                    else
+                    {
+                        Add(op);
+                    }
+                }
+                else
+                {
+                    Add(op);
+                }
+
+                // Update candidates
+                if (list.Last().operation is IWriteOperation iwrite)
+                {
+                    candidates[iwrite.Dest] = list.Last();
+                }
+
+                // If this operation reads some memory locations,
+                // we must not to reduce currently existing opeations which write to the locations.
+                {
+                    if (list.Last().operation is IReadOperation iread)
+                    {
+                        candidates.Remove(iread.Src);
+                    }
+
+                    if (list.Last().operation is IUnitOperation iunit)
+                    {
+                        foreach (var item in iunit.Operations.OfType<IReadOperation>())
+                        {
+                            candidates.Remove(item.Src);
+                        }
+                    }
+                }
+            }
+
+            return list.Select(t => t.operation).Where(op => !HasNoEffect(op)).ToArray();
+        }
+
+        private static IOperation TryReduce(IOperation a, IOperation b)
+        {
+            if (a is IWriteOperation wa && b is IWriteOperation wb && wa.Dest == wb.Dest)
+            {
+                MemoryLocation dest = wa.Dest;
+
+                if (a is AddAssignOperation addA && b is AddAssignOperation addB)
+                {
+                    return new AddAssignOperation(dest, addA.Value + addB.Value);
+                }
+                else if (a is AssignOperation assignA && b is AddAssignOperation add)
+                {
+                    return new AssignOperation(dest, assignA.Value + add.Value);
+                }
+                else if (a is IWriteOperation && !(a is ReadOperation) && b is AssignOperation assignB)
+                {
+                    return assignB;
+                }
+            }
+
+            return null;
+        }
+
+        private static bool HasNoEffect(IOperation operation)
+        {
+            switch (operation)
+            {
+                case AddAssignOperation op:
+                    return op.Value == 0;
+                case MultAddAssignOperation op:
+                    return op.Value == 0;
+                default:
+                    return false;
             }
         }
 
-        private Operation? GetLast() => operations.Count > 0 ? operations.Last() : (Operation?)null;
-        private Operation RemoveLast()
+        private static (IReadOnlyList<IOperation> operations, int ptrChange) OptimizePtrChangeStep(IReadOnlyList<IOperation> operations, int ptrChange)
         {
-            Operation last = operations.Last();
-            operations.RemoveAt(operations.Count - 1);
-            return last;
+            int offset = 0, blockOriginOffset = 0;
+            var list = new List<IOperation>();
+            var delayed = new List<IOperation>();
+            void EmitDelayedOpeations()
+            {
+                int nextPtrChange = offset - blockOriginOffset;
+                if (delayed.Count > 0 || nextPtrChange != 0)
+                {
+                    var block = new BlockUnitOperation(delayed.ToImmutableArray(), offset - blockOriginOffset);
+                    list.Add(block);
+                    delayed.Clear();
+                    blockOriginOffset = offset;
+                }
+            }
+
+            for (int i = 0; i < operations.Count; i++)
+            {
+                Debug.Assert(!(operations[i] is AddPtrOperation));
+                Debug.Assert(operations[i] is IReadOperation || operations[i] is IWriteOperation);
+
+                IOperation op = operations[i].WithAdd(-offset);
+
+                var accessLocations = AccessLocations(op).ToArray();
+                int minLocationDiff = accessLocations.Select(l => Math.Abs(l.Offset)).Min();
+
+                if (minLocationDiff > LocationDiffOptimizationThreshold
+                        || op is RoopUnitOperation || op is IfTrueUnitOperation)
+                {
+                    int adjustOffset;
+                    if (op is RoopUnitOperation roop)
+                    {
+                        adjustOffset = roop.Src.Offset;
+                    }
+                    else if (op is IfTrueUnitOperation iftrue)
+                    {
+                        adjustOffset = iftrue.Src.Offset;
+                    }
+                    else
+                    {
+                        adjustOffset = accessLocations.First().Offset;   // TODO
+                    }
+
+                    offset += adjustOffset;
+                    EmitDelayedOpeations(); // Emit delayed operations
+                    op = op.WithAdd(-adjustOffset);
+                }
+
+                if (op is IUnitOperation unit)
+                {
+                    // Optimize recursive
+                    var optimized = OptimizePtrChangeStep(unit.Operations, unit.PtrChange);
+                    delayed.Add(unit.WithOperations(optimized.operations.ToImmutableArray())
+                                    .WithPtrChange(optimized.ptrChange));
+
+                }
+                else
+                {
+                    delayed.Add(op);
+                }
+            }
+
+            EmitDelayedOpeations();
+            return (list, ptrChange - offset);
         }
 
-        private static bool IsReducible(Opcode opcode)
+        private static IEnumerable<MemoryLocation> AccessLocations(IOperation operation)
         {
-            switch (opcode)
+            if (operation is IReadOperation read)
             {
-                case Opcode.AddPtr:
-                case Opcode.AddValue:
-                    return true;
-                default:
-                    return false;
+                yield return read.Src;
+            }
+
+            if (operation is IWriteOperation write)
+            {
+                yield return write.Dest;
             }
         }
     }

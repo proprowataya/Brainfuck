@@ -1,6 +1,9 @@
-﻿using System;
+﻿using Brainfuck.Core.Syntax;
+using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Runtime.CompilerServices;
 using System.Threading;
 
 namespace Brainfuck.Core
@@ -15,23 +18,23 @@ namespace Brainfuck.Core
             Setting = setting;
         }
 
-        public void Execute(Program program, CancellationToken token = default(CancellationToken))
+        public void Execute(Module module, CancellationToken token = default(CancellationToken))
         {
             if (Setting.ElementType == typeof(Byte))
             {
-                Execute<UInt8, UInt8Operator>(program, token);
+                Execute<Byte, ByteOperator>(module, token);
             }
             else if (Setting.ElementType == typeof(Int16))
             {
-                Execute<Int16, Int16Operator>(program, token);
+                Execute<Int16, Int16Operator>(module, token);
             }
             else if (Setting.ElementType == typeof(Int32))
             {
-                Execute<Int32, Int32Operator>(program, token);
+                Execute<Int32, Int32Operator>(module, token);
             }
             else if (Setting.ElementType == typeof(Int64))
             {
-                Execute<Int64, Int64Operator>(program, token);
+                Execute<Int64, Int64Operator>(module, token);
             }
             else
             {
@@ -39,88 +42,145 @@ namespace Brainfuck.Core
             }
         }
 
-        internal void Execute<T, TOperator>(Program program, CancellationToken token) where TOperator : IOperator<T>
+        private void Execute<T, TOperator>(Module module, CancellationToken token) where TOperator : IIntOperator<T>
         {
-            TOperator op = default(TOperator);
-            T[] buffer = new T[Setting.BufferSize];
-            int ptr = 0;
-            int step = 0;
-
-            for (int i = 0; i < program.Operations.Length; i++, step++)
-            {
-                token.ThrowIfCancellationRequested();
-                OnStepStart?.Invoke(new OnStepStartEventArgs(step, i, ptr, new ArrayView<T>(buffer)));
-
-                Operation operation = program.Operations[i];
-                int value = operation.Value;
-                ref T current = ref buffer[ptr];
-
-                switch (operation.Opcode)
-                {
-                    case Opcode.AddPtr:
-                        ptr += value;
-                        if (ptr >= buffer.Length)
-                        {
-                            buffer = ExpandBuffer(buffer, ptr + 1);
-                        }
-                        break;
-                    case Opcode.AddValue:
-                        current = op.Add(current, value);
-                        break;
-                    case Opcode.Put:
-                        Put(op.ToChar(current));
-                        break;
-                    case Opcode.Read:
-                        current = op.FromInt(Read());
-                        break;
-                    case Opcode.BrZero:
-                    case Opcode.OpeningBracket:
-                        if (op.IsZero(current))
-                        {
-                            i = value;
-                        }
-                        break;
-                    case Opcode.ClosingBracket:
-                        if (op.IsNotZero(current))
-                        {
-                            i = value;
-                        }
-                        break;
-                    case Opcode.MultAdd:
-                        {
-                            if (ptr + operation.Value >= buffer.Length)
-                            {
-                                buffer = ExpandBuffer(buffer, ptr + operation.Value + 1);
-                            }
-                            ref T dest = ref buffer[ptr + operation.Value];
-                            dest = op.Add(dest, op.Mult(current, operation.Value2));
-                        }
-                        break;
-                    case Opcode.Assign:
-                        {
-                            if (ptr + operation.Value >= buffer.Length)
-                            {
-                                buffer = ExpandBuffer(buffer, ptr + operation.Value + 1);
-                            }
-                            ref T dest = ref buffer[ptr + operation.Value];
-                            dest = op.FromInt(operation.Value2);
-                        }
-                        break;
-                    case Opcode.Unknown:
-                    default:
-                        // Do nothing
-                        break;
-                }
-            }
+            var visitor = new InterpreterImplement<T, TOperator>(this, module, token);
+            module.Root.Accept(visitor);
         }
 
-        private static T[] ExpandBuffer<T>(T[] buffer, int minLength)
+        private class InterpreterImplement<T, TOperator> : IVisitor where TOperator : IIntOperator<T>
         {
-            int newSize = Math.Max(buffer.Length * 2, minLength);
-            T[] newBuffer = new T[newSize];
-            Array.Copy(buffer, newBuffer, buffer.Length);
-            buffer = newBuffer;
-            return buffer;
+            private readonly Interpreter parent;
+            private readonly Module module;
+            private readonly CancellationToken token;
+            private T[] buffer;
+            private int ptr;
+            private long step;
+
+            public InterpreterImplement(Interpreter parent, Module module, CancellationToken token)
+            {
+                this.parent = parent;
+                this.module = module;
+                this.token = token;
+                this.buffer = new T[parent.Setting.BufferSize];
+                this.ptr = 0;
+                this.step = 0;
+            }
+
+            public (T[] buffer, int ptr, long step) GetState() => (buffer, ptr, step);
+
+            public void Visit(BlockUnitOperation op)
+            {
+                PreRoutine(op);
+                ExecuteOperations(op.Operations, op.PtrChange);
+            }
+
+            public void Visit(IfTrueUnitOperation op)
+            {
+                PreRoutine(op);
+                if (default(TOperator).IsNotZero(buffer[ptr + op.Src.Offset]))
+                {
+                    ExecuteOperations(op.Operations, op.PtrChange);
+                }
+            }
+
+            public void Visit(RoopUnitOperation op)
+            {
+                PreRoutine(op);
+                while (default(TOperator).IsNotZero(buffer[ptr + op.Src.Offset]))
+                {
+                    ExecuteOperations(op.Operations, op.PtrChange);
+                    EnsureBufferCapacity(op);
+                }
+            }
+
+            private void ExecuteOperations(ImmutableArray<IOperation> operations, int ptrChange)
+            {
+                for (int i = 0; i < operations.Length; i++)
+                {
+                    operations[i].Accept(this);
+                }
+
+                ptr += ptrChange;
+            }
+
+            public void Visit(AddPtrOperation op)
+            {
+                PreRoutine(op);
+                ptr += op.Value;
+            }
+
+            public void Visit(AssignOperation op)
+            {
+                PreRoutine(op);
+                buffer[ptr + op.Dest.Offset] = default(TOperator).FromInt(op.Value);
+            }
+
+            public void Visit(AddAssignOperation op)
+            {
+                PreRoutine(op);
+                ref T dest = ref buffer[ptr + op.Dest.Offset];
+                dest = default(TOperator).Add(dest, op.Value);
+            }
+
+            public void Visit(MultAddAssignOperation op)
+            {
+                PreRoutine(op);
+                TOperator top = default(TOperator);
+                ref T src = ref buffer[ptr + op.Src.Offset];
+                ref T dest = ref buffer[ptr + op.Dest.Offset];
+                dest = top.Add(dest, top.Mult(src, op.Value));
+            }
+
+            public void Visit(PutOperation op)
+            {
+                PreRoutine(op);
+                Put(default(TOperator).ToChar(buffer[ptr + op.Src.Offset]));
+            }
+
+            public void Visit(ReadOperation op)
+            {
+                PreRoutine(op);
+                buffer[ptr + op.Dest.Offset] = default(TOperator).FromInt(Read());
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            private void PreRoutine(IOperation op)
+            {
+                token.ThrowIfCancellationRequested();
+                EnsureBufferCapacity(op);
+                parent.OnStepStart?.Invoke(new OnStepStartEventArgs(ptr, step, op, new ArrayView<T>(buffer)));
+                step++;
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            private void EnsureBufferCapacity(IOperation op)
+            {
+                int maxAccessPtr = 0;
+                if (op is IReadOperation read)
+                {
+                    maxAccessPtr = Math.Max(read.Src.Offset, maxAccessPtr);
+                }
+                if (op is IWriteOperation write)
+                {
+                    maxAccessPtr = Math.Max(write.Dest.Offset, maxAccessPtr);
+                }
+                maxAccessPtr += ptr;
+
+                if (maxAccessPtr >= buffer.Length)
+                {
+                    ExpandBuffer(maxAccessPtr + 1);
+                }
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            private void ExpandBuffer(int minLength)
+            {
+                int newSize = Math.Max(buffer.Length + buffer.Length / 2, minLength);
+                T[] newBuffer = new T[newSize];
+                Array.Copy(buffer, newBuffer, buffer.Length);
+                buffer = newBuffer;
+            }
         }
 
         private static int Read() => Console.Read();
@@ -133,16 +193,16 @@ namespace Brainfuck.Core
 
     public sealed class OnStepStartEventArgs
     {
-        public int Step { get; }
-        public int Index { get; }
         public int Pointer { get; }
+        public long Step { get; }
+        public IOperation Operation { get; }
         public IReadOnlyList<object> Buffer { get; }
 
-        public OnStepStartEventArgs(int step, int index, int pointer, IReadOnlyList<object> buffer)
+        public OnStepStartEventArgs(int pointer, long step, IOperation operation, IReadOnlyList<object> buffer)
         {
-            Step = step;
-            Index = index;
             Pointer = pointer;
+            Step = step;
+            Operation = operation;
             Buffer = buffer;
         }
     }
@@ -175,7 +235,7 @@ namespace Brainfuck.Core
 
     #region Operator
 
-    internal interface IOperator<T>
+    internal interface IIntOperator<T>
     {
         T Add(T a, int b);
         T Add(T a, T b);
@@ -186,18 +246,18 @@ namespace Brainfuck.Core
         char ToChar(T value);
     }
 
-    internal struct UInt8Operator : IOperator<UInt8>
+    internal struct ByteOperator : IIntOperator<Byte>
     {
-        public UInt8 Add(UInt8 a, int b) => new UInt8((byte)(a.Value + b));
-        public UInt8 Add(UInt8 a, UInt8 b) => (UInt8)(a + b);
-        public UInt8 Mult(UInt8 a, int b) => (UInt8)(a.Value * b);
-        public bool IsZero(UInt8 value) => value == 0;
-        public bool IsNotZero(UInt8 value) => value != 0;
-        public UInt8 FromInt(int value) => (UInt8)value;
-        public char ToChar(UInt8 value) => (char)value;
+        public Byte Add(Byte a, int b) => (Byte)(a + b);
+        public Byte Add(Byte a, Byte b) => (Byte)(a + b);
+        public Byte Mult(Byte a, int b) => (Byte)(a * b);
+        public bool IsZero(Byte value) => value == 0;
+        public bool IsNotZero(Byte value) => value != 0;
+        public Byte FromInt(int value) => (Byte)value;
+        public char ToChar(Byte value) => (char)value;
     }
 
-    internal struct Int16Operator : IOperator<Int16>
+    internal struct Int16Operator : IIntOperator<Int16>
     {
         public Int16 Add(Int16 a, int b) => (Int16)(a + b);
         public Int16 Add(Int16 a, Int16 b) => (Int16)(a + b);
@@ -208,7 +268,7 @@ namespace Brainfuck.Core
         public char ToChar(Int16 value) => (char)value;
     }
 
-    internal struct Int32Operator : IOperator<Int32>
+    internal struct Int32Operator : IIntOperator<Int32>
     {
         public Int32 Add(Int32 a, int b) => (Int32)(a + b);
         public Int32 Mult(Int32 a, int b) => (Int32)(a * b);
@@ -218,7 +278,7 @@ namespace Brainfuck.Core
         public char ToChar(Int32 value) => (char)value;
     }
 
-    internal struct Int64Operator : IOperator<Int64>
+    internal struct Int64Operator : IIntOperator<Int64>
     {
         public Int64 Add(Int64 a, int b) => (Int64)(a + b);
         public Int64 Add(Int64 a, Int64 b) => (Int64)(a + b);

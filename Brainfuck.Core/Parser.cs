@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Brainfuck.Core.Syntax;
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
@@ -7,66 +8,55 @@ namespace Brainfuck.Core
 {
     public static class Parser
     {
-        public static Program Parse(string source)
+        public static Module Parse(string source)
         {
-            var operations = ImmutableArray.CreateBuilder<Operation>(source.Length);
-            var stack = new Stack<int>();
-            var brackets = new List<int>();
-            var jumpAddress = new Dictionary<int, int>();
+            int i = 0;
+            var t = ParseUnit(source, 0, ref i);
+            return new Module(source, new BlockUnitOperation(t.operations, t.ptrChange));
+        }
 
-            for (int i = 0; i < source.Length; i++)
+        private static (ImmutableArray<IOperation> operations, int ptrChange) ParseUnit(string source, int firstOffset, ref int i)
+        {
+            int offset = firstOffset;
+            var builder = ImmutableArray.CreateBuilder<IOperation>();
+
+            for (; i < source.Length && source[i] != ']'; i++)
             {
                 switch (source[i])
                 {
                     case '>':
-                        operations.Add(new Operation(Opcode.AddPtr, 1));
+                        offset++;
                         break;
                     case '<':
-                        operations.Add(new Operation(Opcode.AddPtr, -1));
+                        offset--;
                         break;
                     case '+':
-                        operations.Add(new Operation(Opcode.AddValue, 1));
+                        builder.Add(new AddAssignOperation(new MemoryLocation(offset), 1));
                         break;
                     case '-':
-                        operations.Add(new Operation(Opcode.AddValue, -1));
+                        builder.Add(new AddAssignOperation(new MemoryLocation(offset), -1));
                         break;
                     case '.':
-                        operations.Add(new Operation(Opcode.Put));
+                        builder.Add(new PutOperation(new MemoryLocation(offset)));
                         break;
                     case ',':
-                        operations.Add(new Operation(Opcode.Read));
+                        builder.Add(new ReadOperation(new MemoryLocation(offset)));
                         break;
                     case '[':
                         {
-                            stack.Push(i);
-                            brackets.Add(i);
-                            operations.Add(new Operation(Opcode.Unknown));
+                            i++; // '['
+                            var t = ParseUnit(source, offset, ref i);
+                            builder.Add(new RoopUnitOperation(t.operations, t.ptrChange, new MemoryLocation(offset)));
                             break;
                         }
-                    case ']':
-                        {
-                            int startAddress = stack.Pop();
-                            jumpAddress.Add(startAddress, i);
-                            operations.Add(new Operation(Opcode.ClosingBracket, startAddress));
-                            break;
-                        }
+                    case ']':   // Unreachable
                     default:
-                        ManageUnknownChar(source[i]);
-                        operations.Add(new Operation(Opcode.Unknown));
+                        // Do nothing
                         break;
                 }
             }
 
-            foreach (var index in brackets)
-            {
-                operations[index] = new Operation(Opcode.OpeningBracket, jumpAddress[index]);
-            }
-
-            Debug.Assert(operations.Count == source.Length);
-            return new Program(source, operations.MoveToImmutable());
+            return (builder.ToImmutable(), offset - firstOffset);
         }
-
-        private static void ManageUnknownChar(char value) { /* Do nothing */ }
-        //private static void ManageUnknownChar(char value) => Console.WriteLine($"Warning : Unknown char '{value}'");
     }
 }

@@ -9,7 +9,7 @@ namespace Brainfuck.Test
     public class ExecutionTest
     {
         [Theory, MemberData(nameof(ExecutionCase))]
-        public void HelloWorldTest(object description, Action<Program> action, bool optimize)
+        public void HelloWorldTest(object description, Action<Module> action, bool optimize)
         {
             const string HelloWorld = "Hello World!";
             const string Code = ">+++++++++[<++++++++>-]<.>+++++++[<++++>-]<+.+++++++..+++.[-]>++++++++[<++++>-]<.>+++++++++++[<+++++>-]<.>++++++++[<+++>-]<.+++.------.--------.[-]>++++++++[<++++>-]<+.[-]++++++++++.";
@@ -17,7 +17,7 @@ namespace Brainfuck.Test
         }
 
         [Theory, MemberData(nameof(ExecutionCase))]
-        public void HelloWorldWithErrorsTest(object description, Action<Program> action, bool optimize)
+        public void HelloWorldWithErrorsTest(object description, Action<Module> action, bool optimize)
         {
             const string HelloWorld = "Hello World!";
             const string Code = ">++++  + + + ++111111[<1+1+1+1+1+1+1+1+1>1-1]1<1.1>1+1+1+++++[<++++>-]<+.+++++++..+++.[-]>++++++++[<++++>-]<.>+++++++++++[<+++++>-]<.>++++++++[<+++>-]<.+++.------.--------.[-]>++++++++[<++++>-]<+.[-]+++++++++11+.";
@@ -25,7 +25,7 @@ namespace Brainfuck.Test
         }
 
         [Theory, MemberData(nameof(ExecutionCase))]
-        public void EchoTest(object description, Action<Program> action, bool optimize)
+        public void EchoTest(object description, Action<Module> action, bool optimize)
         {
             const string InputString = "This is a test string.\0";
             const string Code = "+[,.]";
@@ -33,7 +33,7 @@ namespace Brainfuck.Test
         }
 
         [Theory, MemberData(nameof(ExecutionCase))]
-        public void EchoTest2(object description, Action<Program> action, bool optimize)
+        public void EchoTest2(object description, Action<Module> action, bool optimize)
         {
             const string InputString = "This is a test string.\0";
             const string Code = ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>+[,.]";
@@ -41,7 +41,7 @@ namespace Brainfuck.Test
         }
 
         [Theory, MemberData(nameof(ExecutionCase))]
-        public void PrimeTest(object description, Action<Program> action, bool optimize)
+        public void PrimeTest(object description, Action<Module> action, bool optimize)
         {
             // http://esoteric.sange.fi/brainfuck/bf-source/prog/PRIME.BF
             const string Code = @"
@@ -65,12 +65,12 @@ namespace Brainfuck.Test
             Assert.Equal(Expected, Test(action, Code, optimize, InputString));
         }
 
-        private static string Test(Action<Program> action, string source, bool optimize, string stdin = "")
+        private static string Test(Action<Module> action, string source, bool optimize, string stdin = "")
         {
-            Program program = Parser.Parse(source);
+            Module module = Parser.Parse(source);
             if (optimize)
             {
-                program = program.Optimize();
+                module = module.Optimize();
             }
 
             using (var reader = new StringReader(stdin))
@@ -78,7 +78,7 @@ namespace Brainfuck.Test
             {
                 Console.SetIn(reader);
                 Console.SetOut(writer);
-                action(program);
+                action(module);
                 Console.Out.Flush();
                 return writer.ToString().TrimEnd();
             }
@@ -87,7 +87,7 @@ namespace Brainfuck.Test
         private const int DefaultBufferSize = 1;
         private static readonly Type[] TestTypes = { typeof(Byte), typeof(Int16), typeof(Int32), typeof(Int64) };
 
-        // (object description, Action<Program> action, bool optimize)
+        // (object description, Action<Module> action, bool optimize)
         public static IEnumerable<object[]> ExecutionCase
         {
             get
@@ -117,27 +117,17 @@ namespace Brainfuck.Test
             }
         }
 
-        private static Action<Program> GetInterpreterAction(Type elementType)
+        private static Action<Module> GetInterpreterAction(Type elementType)
         {
-            return program => new Interpreter(Setting.Default.WithElementType(elementType)).Execute(program);
+            return module => new Interpreter(Setting.Default.WithElementType(elementType).WithBufferSize(1)).Execute(module);
         }
 
-        private static Action<Program> GetCompilerAction(Setting setting)
+        private static Action<Module> GetILCompilerAction(Setting setting)
         {
-            return program =>
-            {
-                Compiler compiler = new Compiler(setting);
-                Action action = compiler.Compile(program);
-                action();
-            };
-        }
-
-        private static Action<Program> GetILCompilerAction(Setting setting)
-        {
-            return program =>
+            return module =>
             {
                 ILCompiler compiler = new ILCompiler(setting);
-                Action action = compiler.Compile(program);
+                Action action = compiler.Compile(module);
                 action();
             };
         }
