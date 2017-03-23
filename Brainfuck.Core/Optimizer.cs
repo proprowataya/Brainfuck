@@ -123,8 +123,15 @@ namespace Brainfuck.Core
 
         private static IReadOnlyList<IOperation> OptimizeReduceStep(IReadOnlyList<IOperation> operations)
         {
+            // Optimized operations.
+            // ID is used to identify which elenent we remove.
             var list = new List<(int id, IOperation operation)>();
-            var lastWrites = new Dictionary<MemoryLocation, (int id, IOperation operation)>();
+
+            // Candidates to be reduced.
+            // candidates[location] is an operation which writes to the location,
+            // and it can be reduced by further operation.
+            var candidates = new Dictionary<MemoryLocation, (int id, IOperation operation)>();
+
             int nextID = 0;
             void Add(IOperation operation) => list.Add((nextID++, operation));
 
@@ -140,20 +147,20 @@ namespace Brainfuck.Core
                     Add(unit.WithOperations(optimized.ToImmutableArray()));
 
                     // Prevent further reduce
-                    lastWrites.Clear();
+                    candidates.Clear();
                 }
                 else if (op is IWriteOperation write)
                 {
                     // Find a candidate to be reduced with 'op'
-                    lastWrites.TryGetValue(write.Dest, out var lastReducable);
+                    candidates.TryGetValue(write.Dest, out var candidate);
 
                     // If the candidate was found and can be reducable
-                    if (lastReducable.operation != null)
+                    if (candidate.operation != null)
                     {
-                        var reduced = TryReduce(lastReducable.operation, write);
+                        var reduced = TryReduce(candidate.operation, write);
                         if (reduced != null)
                         {
-                            list.RemoveAll(t => t.id == lastReducable.id);
+                            list.RemoveAll(t => t.id == candidate.id);
                             Add(reduced);
                         }
                         else
@@ -171,10 +178,10 @@ namespace Brainfuck.Core
                     Add(op);
                 }
 
-                // Update lastWrites
+                // Update candidates
                 if (list.Last().operation is IWriteOperation iwrite)
                 {
-                    lastWrites[iwrite.Dest] = list.Last();
+                    candidates[iwrite.Dest] = list.Last();
                 }
 
                 // If this operation reads some memory locations,
@@ -182,14 +189,14 @@ namespace Brainfuck.Core
                 {
                     if (list.Last().operation is IReadOperation iread)
                     {
-                        lastWrites.Remove(iread.Src);
+                        candidates.Remove(iread.Src);
                     }
 
                     if (list.Last().operation is IUnitOperation iunit)
                     {
                         foreach (var item in iunit.Operations.OfType<IReadOperation>())
                         {
-                            lastWrites.Remove(item.Src);
+                            candidates.Remove(item.Src);
                         }
                     }
                 }

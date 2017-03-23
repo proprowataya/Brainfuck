@@ -47,15 +47,15 @@ namespace Brainfuck.Core.Syntax
             PtrChange = ptrChange;
         }
 
-        public IEnumerable<IReadOperation> EnumerateReadOperations => Operations.OfType<IReadOperation>();
-        public IEnumerable<IWriteOperation> EnumerateWriteOperations => Operations.OfType<IWriteOperation>();
-
         public IOperation WithAdd(int delta) =>
             new BlockUnitOperation(Operations.Select(o => o.WithAdd(delta)).ToImmutableArray(), PtrChange);
+
         public IUnitOperation WithOperations(ImmutableArray<IOperation> newOperations) =>
             new BlockUnitOperation(newOperations, PtrChange);
+
         public IUnitOperation WithPtrChange(int newPtrChange)
             => new BlockUnitOperation(Operations, newPtrChange);
+
         public void Accept(IVisitor visitor) => visitor.Visit(this);
         public T Accept<T>(IVisitor<T> visitor) => visitor.Visit(this);
     }
@@ -73,15 +73,15 @@ namespace Brainfuck.Core.Syntax
             Src = src;
         }
 
-        public IEnumerable<IReadOperation> EnumerateReadOperations => Operations.OfType<IReadOperation>();
-        public IEnumerable<IWriteOperation> EnumerateWriteOperations => Operations.OfType<IWriteOperation>();
-
         public IOperation WithAdd(int delta) =>
             new IfTrueUnitOperation(Operations.Select(o => o.WithAdd(delta)).ToImmutableArray(), PtrChange, Src.WithAdd(delta));
+
         public IUnitOperation WithOperations(ImmutableArray<IOperation> newOperations) =>
             new IfTrueUnitOperation(newOperations, PtrChange, Src);
+
         public IUnitOperation WithPtrChange(int newPtrChange)
             => new IfTrueUnitOperation(Operations, newPtrChange, Src);
+
         public void Accept(IVisitor visitor) => visitor.Visit(this);
         public T Accept<T>(IVisitor<T> visitor) => visitor.Visit(this);
     }
@@ -99,15 +99,15 @@ namespace Brainfuck.Core.Syntax
             Src = src;
         }
 
-        public IEnumerable<IReadOperation> EnumerateReadOperations => Operations.OfType<IReadOperation>();
-        public IEnumerable<IWriteOperation> EnumerateWriteOperations => Operations.OfType<IWriteOperation>();
-
         public IOperation WithAdd(int delta) =>
             new RoopUnitOperation(Operations.Select(o => o.WithAdd(delta)).ToImmutableArray(), PtrChange, Src.WithAdd(delta));
+
         public IUnitOperation WithOperations(ImmutableArray<IOperation> newOperations) =>
             new RoopUnitOperation(newOperations, PtrChange, Src);
+
         public IUnitOperation WithPtrChange(int newPtrChange)
             => new RoopUnitOperation(Operations, newPtrChange, Src);
+
         public void Accept(IVisitor visitor) => visitor.Visit(this);
         public T Accept<T>(IVisitor<T> visitor) => visitor.Visit(this);
     }
