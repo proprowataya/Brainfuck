@@ -3,6 +3,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Runtime.CompilerServices;
 using System.Threading;
 
 namespace Brainfuck.Core
@@ -70,11 +71,13 @@ namespace Brainfuck.Core
 
             public void Visit(BlockUnitOperation op)
             {
+                PreRoutine(op);
                 ExecuteOperations(op.Operations, op.PtrChange);
             }
 
             public void Visit(IfTrueUnitOperation op)
             {
+                PreRoutine(op);
                 if (default(TOperator).IsNotZero(buffer[ptr + op.Src.Offset]))
                 {
                     ExecuteOperations(op.Operations, op.PtrChange);
@@ -83,9 +86,11 @@ namespace Brainfuck.Core
 
             public void Visit(RoopUnitOperation op)
             {
+                PreRoutine(op);
                 while (default(TOperator).IsNotZero(buffer[ptr + op.Src.Offset]))
                 {
                     ExecuteOperations(op.Operations, op.PtrChange);
+                    EnsureBufferCapacity(op);
                 }
             }
 
@@ -101,22 +106,26 @@ namespace Brainfuck.Core
 
             public void Visit(AddPtrOperation op)
             {
+                PreRoutine(op);
                 ptr += op.Value;
             }
 
             public void Visit(AssignOperation op)
             {
+                PreRoutine(op);
                 buffer[ptr + op.Dest.Offset] = default(TOperator).FromInt(op.Value);
             }
 
             public void Visit(AddAssignOperation op)
             {
+                PreRoutine(op);
                 ref T dest = ref buffer[ptr + op.Dest.Offset];
                 dest = default(TOperator).Add(dest, op.Value);
             }
 
             public void Visit(MultAddAssignOperation op)
             {
+                PreRoutine(op);
                 TOperator top = default(TOperator);
                 ref T src = ref buffer[ptr + op.Src.Offset];
                 ref T dest = ref buffer[ptr + op.Dest.Offset];
@@ -125,12 +134,52 @@ namespace Brainfuck.Core
 
             public void Visit(PutOperation op)
             {
+                PreRoutine(op);
                 Put(default(TOperator).ToChar(buffer[ptr + op.Src.Offset]));
             }
 
             public void Visit(ReadOperation op)
             {
+                PreRoutine(op);
                 buffer[ptr + op.Dest.Offset] = default(TOperator).FromInt(Read());
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            private void PreRoutine(IOperation op)
+            {
+                token.ThrowIfCancellationRequested();
+                EnsureBufferCapacity(op);
+                parent.OnStepStart?.Invoke(new OnStepStartEventArgs(ptr, step, op, new ArrayView<T>(buffer)));
+                step++;
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            private void EnsureBufferCapacity(IOperation op)
+            {
+                int maxAccessPtr = 0;
+                if (op is IReadOperation read)
+                {
+                    maxAccessPtr = Math.Max(read.Src.Offset, maxAccessPtr);
+                }
+                if (op is IWriteOperation write)
+                {
+                    maxAccessPtr = Math.Max(write.Dest.Offset, maxAccessPtr);
+                }
+                maxAccessPtr += ptr;
+
+                if (maxAccessPtr >= buffer.Length)
+                {
+                    ExpandBuffer(maxAccessPtr + 1);
+                }
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            private void ExpandBuffer(int minLength)
+            {
+                int newSize = Math.Max(buffer.Length + buffer.Length / 2, minLength);
+                T[] newBuffer = new T[newSize];
+                Array.Copy(buffer, newBuffer, buffer.Length);
+                buffer = newBuffer;
             }
         }
 

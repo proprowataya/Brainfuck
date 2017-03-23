@@ -41,7 +41,9 @@ namespace Brainfuck.Repl
         {
             while (ReadCode() is string source && source != "exit")
             {
+#if !DEBUG
                 try
+#endif
                 {
                     Module module = ParseSource(source, command.Optimize);
                     if (command.ShowPseudoCode)
@@ -55,11 +57,13 @@ namespace Brainfuck.Repl
                     RunByILCompiler(module, setting, printHeader: true);
                     RunByInterpreter(module, setting, printHeader: true, stepExecution: command.StepExecution);
                 }
+#if !DEBUG
                 catch (Exception e)
                 {
                     Console.WriteLine(e.ToString());
                     Console.WriteLine();
                 }
+#endif
             }
         }
 
@@ -146,7 +150,9 @@ namespace Brainfuck.Repl
 
         private static void Run(Action action, string message)
         {
+#if !DEBUG
             try
+#endif
             {
                 if (message != null)
                 {
@@ -161,11 +167,13 @@ namespace Brainfuck.Repl
                 Console.WriteLine($"Elapsed {sw.Elapsed}");
                 Console.WriteLine();
             }
+#if !DEBUG
             catch (Exception e)
             {
                 Console.WriteLine(e.ToString());
                 Console.WriteLine();
             }
+#endif
         }
 
         #endregion

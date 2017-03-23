@@ -119,7 +119,7 @@ namespace Brainfuck.Test
 
         private static Action<Module> GetInterpreterAction(Type elementType)
         {
-            return module => new Interpreter(Setting.Default.WithElementType(elementType)).Execute(module);
+            return module => new Interpreter(Setting.Default.WithElementType(elementType).WithBufferSize(1)).Execute(module);
         }
 
         private static Action<Module> GetILCompilerAction(Setting setting)
