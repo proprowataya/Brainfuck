@@ -45,18 +45,17 @@ namespace Brainfuck.Repl
                 try
 #endif
                 {
-                    Module module = ParseSource(source, command.Optimize);
                     if (command.EmitPseudoCode)
                     {
                         Console.Error.WriteLine();
                         Console.Out.WriteLine("/***** Pseudo Code *****/");
-                        Console.Out.WriteLine(module.ToPseudoCode());
+                        Console.Out.WriteLine(ParseSource(source, command.Optimize, setting).ToPseudoCode());
                         Console.Error.WriteLine();
                     }
 
-                    RunByILUnsafeCompiler(module, setting, printHeader: true);
-                    RunByILCompiler(module, setting, printHeader: true);
-                    RunByInterpreter(module, setting, printHeader: true, stepExecution: command.StepExecution);
+                    RunByILUnsafeCompiler(source, setting, optimize: command.Optimize, printHeader: true);
+                    RunByILCompiler(source, setting, optimize: command.Optimize, printHeader: true);
+                    RunByInterpreter(source, setting, optimize: command.Optimize, printHeader: true, stepExecution: command.StepExecution);
                 }
 #if !DEBUG
                 catch (Exception e)
@@ -71,7 +70,7 @@ namespace Brainfuck.Repl
         private static void Execute(CommandLineArgument command, Setting setting)
         {
             string source = File.ReadAllText(command.FileName);
-            Module module = ParseSource(source, command.Optimize);
+            Module module = ParseSource(source, command.Optimize, setting);
             if (command.EmitPseudoCode)
             {
                 Console.Out.WriteLine("/***** Pseudo Code *****/");
@@ -81,40 +80,44 @@ namespace Brainfuck.Repl
 
             if (command.StepExecution)
             {
-                RunByInterpreter(module, setting, printHeader: false, stepExecution: true);
+                RunByInterpreter(source, setting, optimize: command.Optimize, printHeader: false, stepExecution: true);
             }
             else
             {
-                RunByILUnsafeCompiler(module, setting, printHeader: false);
+                RunByILUnsafeCompiler(source, setting, optimize: command.Optimize, printHeader: false);
             }
         }
 
         #region Runs
 
-        private static void RunByILUnsafeCompiler(Module module, Setting setting, bool printHeader)
+        private static void RunByILUnsafeCompiler(string source, Setting setting, bool optimize, bool printHeader)
         {
             Run(() =>
             {
+                Module module = ParseSource(source, optimize, setting.WithFavor(Favor.ILUnsafe));
                 ILCompiler compiler = new ILCompiler(setting.WithUnsafeCode(true));
                 Action action = compiler.Compile(module);
                 action();
             }, printHeader ? "===== Compiler (System.Reflection.Emit, unsafe) =====" : null);
         }
 
-        private static void RunByILCompiler(Module module, Setting setting, bool printHeader)
+        private static void RunByILCompiler(string source, Setting setting, bool optimize, bool printHeader)
         {
             Run(() =>
             {
+                Module module = ParseSource(source, optimize, setting.WithFavor(Favor.ILSafe));
                 ILCompiler compiler = new ILCompiler(setting);
                 Action action = compiler.Compile(module);
                 action();
             }, printHeader ? "===== Compiler (System.Reflection.Emit) =====" : null);
         }
 
-        private static void RunByInterpreter(Module module, Setting setting, bool printHeader, bool stepExecution)
+        private static void RunByInterpreter(string source, Setting setting, bool optimize, bool printHeader, bool stepExecution)
         {
             Run(() =>
             {
+                Module module = ParseSource(source, optimize, setting.WithFavor(Favor.Interpreter));
+
                 if (stepExecution)
                 {
                     setting = setting.WithBufferSize(1);
@@ -194,12 +197,12 @@ namespace Brainfuck.Repl
             return sb.ToString();
         }
 
-        private static Module ParseSource(string source, bool optimize)
+        private static Module ParseSource(string source, bool optimize, Setting setting)
         {
             Module module = Parser.Parse(source);
             if (optimize)
             {
-                module = module.Optimize();
+                module = new Optimizer(setting).Optimize(module);
             }
 
             return module;

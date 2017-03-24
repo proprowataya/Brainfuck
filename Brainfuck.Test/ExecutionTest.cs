@@ -70,7 +70,7 @@ namespace Brainfuck.Test
             Module module = Parser.Parse(source);
             if (optimize)
             {
-                module = module.Optimize();
+                module = new Optimizer(Setting.Default).Optimize(module);
             }
 
             using (var reader = new StringReader(stdin))

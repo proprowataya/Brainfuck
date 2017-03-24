@@ -7,15 +7,16 @@ using System.Linq;
 
 namespace Brainfuck.Core
 {
-    public static class Optimizer
+    public class Optimizer
     {
-        #region Constants
+        public Setting Setting { get; }
 
-        private const int LocationDiffOptimizationThreshold = 1;
+        public Optimizer(Setting setting)
+        {
+            Setting = setting;
+        }
 
-        #endregion
-
-        public static Module Optimize(this Module module)
+        public Module Optimize(Module module)
         {
             IReadOnlyList<IOperation> operations = module.Root.Operations;
             int ptrChange = module.Root.PtrChange;
@@ -241,7 +242,7 @@ namespace Brainfuck.Core
             }
         }
 
-        private static (IReadOnlyList<IOperation> operations, int ptrChange) OptimizePtrChangeStep(IReadOnlyList<IOperation> operations, int ptrChange)
+        private (IReadOnlyList<IOperation> operations, int ptrChange) OptimizePtrChangeStep(IReadOnlyList<IOperation> operations, int ptrChange)
         {
             int offset = 0, blockOriginOffset = 0;
             var list = new List<IOperation>();
@@ -268,8 +269,7 @@ namespace Brainfuck.Core
                 var accessLocations = AccessLocations(op).ToArray();
                 int minLocationDiff = accessLocations.Select(l => Math.Abs(l.Offset)).Min();
 
-                if (minLocationDiff > LocationDiffOptimizationThreshold
-                        || op is RoopUnitOperation || op is IfTrueUnitOperation)
+                if (minLocationDiff > PtrDiffThreshold || op is RoopUnitOperation || op is IfTrueUnitOperation)
                 {
                     int adjustOffset;
                     if (op is RoopUnitOperation roop)
@@ -320,5 +320,8 @@ namespace Brainfuck.Core
                 yield return write.Dest;
             }
         }
+
+        // Currently, this value is constant and don't depend on favor.
+        private int PtrDiffThreshold => 2;
     }
 }
