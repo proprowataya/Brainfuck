@@ -92,6 +92,11 @@ namespace Brainfuck.Repl
             },
 #endif  
             {
+                "s|step",
+                "Enable step execution.",
+                v => StepExecution = (v != null)
+            },
+            {
                 "h|help",
                 "Show help (this message).",
                 v => Help = (v != null)

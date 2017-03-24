@@ -18,8 +18,8 @@ namespace Brainfuck.Repl
 #endif
                 {
                     EmitPseudoCodeIfNecessary(source);
-                    RunByILUnsafeCompiler(source, printHeader: true);
-                    RunByILCompiler(source, printHeader: true);
+                    RunByILCompiler(source, printHeader: true, overrideUnsafeCode: true);
+                    RunByILCompiler(source, printHeader: true, overrideUnsafeCode: false);
                     RunByInterpreter(source, printHeader: true);
                 }
 #if !DEBUG

@@ -47,26 +47,29 @@ namespace Brainfuck.Repl
             }
         }
 
-        protected void RunByILUnsafeCompiler(string source, bool printHeader)
+        protected void RunDefault(string source, bool printHeader)
         {
-            StartProgram(() =>
+            if (command.StepExecution)
             {
-                Module module = ParseSource(source, Favor.ILUnsafe);
-                ILCompiler compiler = new ILCompiler(setting.WithUnsafeCode(true));
-                Action action = compiler.Compile(module);
-                return action;
-            }, printHeader ? "===== Compiler (System.Reflection.Emit, unsafe) =====" : null);
+                RunByInterpreter(source, printHeader);
+            }
+            else
+            {
+                RunByILCompiler(source, printHeader);
+            }
         }
 
-        protected void RunByILCompiler(string source, bool printHeader)
+        protected void RunByILCompiler(string source, bool printHeader, bool? overrideUnsafeCode = null)
         {
+            bool unsafeCode = overrideUnsafeCode ?? !command.CheckRange;
+
             StartProgram(() =>
             {
                 Module module = ParseSource(source, Favor.ILSafe);
-                ILCompiler compiler = new ILCompiler(setting);
+                ILCompiler compiler = new ILCompiler(setting.WithUnsafeCode(unsafeCode));
                 Action action = compiler.Compile(module);
                 return action;
-            }, printHeader ? "===== Compiler (System.Reflection.Emit) =====" : null);
+            }, printHeader ? $"===== Compiler (System.Reflection.Emit{(unsafeCode ? ", unsafe" : "")}) =====" : null);
         }
 
         protected void RunByInterpreter(string source, bool printHeader)

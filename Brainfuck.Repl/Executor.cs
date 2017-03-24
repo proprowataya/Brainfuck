@@ -19,18 +19,7 @@ namespace Brainfuck.Repl
                 return;
             }
 
-            if (command.StepExecution)
-            {
-                RunByInterpreter(source, printHeader: false);
-            }
-            else if (command.CheckRange)
-            {
-                RunByILCompiler(source, printHeader: false);
-            }
-            else
-            {
-                RunByILUnsafeCompiler(source, printHeader: false);
-            }
+            RunDefault(source, printHeader: false);
         }
     }
 }
