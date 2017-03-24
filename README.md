@@ -25,17 +25,8 @@ Brainfuck Interpreter on .NET Core
 > +++++++++[>++++++++>+++++++++++>+++++<<<-]>.>++.+++++++..+++.>-.
 > ------------.<++++++++.--------.+++.------.--------.>+.
 >
-===== Compiler (System.Reflection.Emit) =====
 Hello, world!
-Elapsed 00:00:00.0261776
-
-===== Compiler (System.Linq.Expressions) =====
-Hello, world!
-Elapsed 00:00:00.1543976
-
-===== Interpreter =====
-Hello, world!
-Elapsed 00:00:00.0041453
+Elapsed 00:00:00.0010218
 ```
 
 ```
@@ -44,11 +35,11 @@ $ dotnet Brainfuck.Repl.dll helloworld.bf
 Brainfuck Interpreter on .NET Core
 
 Hello, world!
-Elapsed 00:00:00.0004621
+Elapsed 00:00:00.0013301
 ```
 
 ### Mandelbrot Set
-You can execute [plotting Mandelbrot set program written by Erik Bosman](http://esoteric.sange.fi/brainfuck/utils/mandelbrot/mandelbrot.b).
+[Plotting Mandelbrot set program](http://esoteric.sange.fi/brainfuck/utils/mandelbrot/mandelbrot.b)
 
 ```
 $ dotnet Brainfuck.Repl.dll mandelbrot.b
@@ -103,5 +94,5 @@ AAAAAAAAAAAABBBBBBBBBBCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCDDDDDDDDDDDDDDEEEEEFFGHI
 AAAAAAAAAAAAABBBBBBBBBBBBCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCDDDDDDDDDDDDEEEEFFFI KHGGGHGEDDDDDDDDDCCCCCCCCCBBBBBBBBBBBBBBBBBBBBBBB
 AAAAAAAAAAAAAAABBBBBBBBBBBBBCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCDDDDDDDDDDEEEFGIIGFFEEEDDDDDDDDCCCCCCCCCBBBBBBBBBBBBBBBBBBBBBBBBBB
 
-Elapsed 00:00:02.0309767
+Elapsed 00:00:01.1868387
 ```
