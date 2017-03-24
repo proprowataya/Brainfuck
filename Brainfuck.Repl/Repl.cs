@@ -18,9 +18,17 @@ namespace Brainfuck.Repl
 #endif
                 {
                     EmitPseudoCodeIfNecessary(source);
-                    RunByILCompiler(source, printHeader: true, overrideUnsafeCode: true);
-                    RunByILCompiler(source, printHeader: true, overrideUnsafeCode: false);
-                    RunByInterpreter(source, printHeader: true);
+
+                    if (command.DebugMode)
+                    {
+                        RunByILCompiler(source, printHeader: true, overrideUnsafeCode: true);
+                        RunByILCompiler(source, printHeader: true, overrideUnsafeCode: false);
+                        RunByInterpreter(source, printHeader: true);
+                    }
+                    else
+                    {
+                        RunDefault(source, printHeader: false);
+                    }
                 }
 #if !DEBUG
                 catch (Exception e)

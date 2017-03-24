@@ -14,6 +14,7 @@ namespace Brainfuck.Repl
         public bool Help { get; private set; } = false;
         public bool Silent { get; private set; } = false;
         public bool StepExecution { get; private set; } = false;
+        public bool DebugMode { get; private set; } = false;
         public bool EmitPseudoCode { get; private set; } = false;
 
         public static CommandLineArgument Parse(string[] args, out Setting setting)
@@ -97,15 +98,20 @@ namespace Brainfuck.Repl
                 v => StepExecution = (v != null)
             },
             {
+                "d|debug",
+                "Enable debug mode.",
+                v => DebugMode = (v != null)
+            },
+            {
+                "p|pseudo",
+                "Emit pseudo code (C-like style).",
+                v => EmitPseudoCode = (v != null)
+            },
+            {
                 "h|help",
                 "Show help (this message).",
                 v => Help = (v != null)
             },
-            {
-                "p",
-                "Emit pseudo code (C-like style).",
-                v => EmitPseudoCode = (v != null)
-            }
         };
     }
 }
