@@ -1,5 +1,6 @@
 ﻿using Brainfuck.Core;
 using System.IO;
+using System.Linq;
 
 namespace Brainfuck.Repl
 {
@@ -10,7 +11,8 @@ namespace Brainfuck.Repl
 
         public override void Run()
         {
-            string source = File.ReadAllText(command.FileName);
+            // TODO: Currently we execute first source
+            string source = File.ReadAllText(command.FileNames.First());
             if (EmitPseudoCodeIfNecessary(source))
             {
                 // If we emit pseudo code, we don't execute code.
@@ -20,6 +22,10 @@ namespace Brainfuck.Repl
             if (command.StepExecution)
             {
                 RunByInterpreter(source, printHeader: false);
+            }
+            else if (command.CheckRange)
+            {
+                RunByILCompiler(source, printHeader: false);
             }
             else
             {

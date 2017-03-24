@@ -37,7 +37,7 @@ namespace Brainfuck.Repl
                     Environment.Exit(-1);
                 }
             }
-            else if (command.FileName == null)
+            else if (command.FileNames.Count == 0)
             {
                 new Repl(setting, command).Run();
             }
@@ -190,82 +190,6 @@ namespace Brainfuck.Repl
                 Console.ResetColor();
             }
             Console.Error.WriteLine(" }");
-        }
-    }
-
-    internal class CommandLineArgument
-    {
-        public string FileName { get; } = null;
-        public bool Optimize { get; } = true;
-        public bool Help { get; } = false;
-        public bool StepExecution { get; } = false;
-        public bool EmitPseudoCode { get; } = false;
-
-        public static CommandLineArgument Parse(string[] args, out Setting setting)
-        {
-            CommandLineArgument result = new CommandLineArgument(args, out setting, out bool success);
-            return success ? result : null;
-        }
-
-        private CommandLineArgument(string[] args, out Setting setting, out bool success)
-        {
-            setting = Setting.Default;
-            success = true;
-
-            foreach (var arg in args)
-            {
-                if (arg.StartsWith("-"))
-                {
-                    switch (arg)
-                    {
-                        case "-od":
-                        case "--optimize=disable":
-                            Optimize = false;
-                            break;
-                        case "-h":
-                        case "--help":
-                            Help = true;
-                            break;
-                        case "-s":
-                        case "--step":
-                            StepExecution = true;
-                            break;
-                        case "-p":
-                        case "--pseudo":
-                            EmitPseudoCode = true;
-                            break;
-                        default:
-                            Console.Error.WriteLine($"Error: Unknown command '{arg}'");
-                            success = false;
-                            break;
-                    }
-                }
-                else
-                {
-                    FileName = arg;
-                }
-            }
-        }
-
-        public static void PrintHelp()
-        {
-            string[][] commands =
-            {
-                    new[]{ "-od, --optimize=disable", "Disable optimization" },
-                    new[]{ "-h, --help", "Print usage (this message)" },
-                    new[]{ "-s, --step", "Enable step execution" },
-                    new[]{ "-p, --pseudo", "Emit pseudo code" },
-                };
-
-            int maxCommandLength = commands.Max(c => c[0].Length);
-
-            Console.Error.WriteLine("Usage: dotnet Brainfuck.Repl.dll [source-path] [options]");
-            Console.Error.WriteLine();
-            Console.Error.WriteLine("Options:");
-            foreach (var command in commands)
-            {
-                Console.Error.WriteLine($"  {command[0].PadRight(maxCommandLength)}  {command[1]}");
-            }
         }
     }
 }
