@@ -11,6 +11,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Brainfuck.Core.ILGeneration\Brainfuck.Core.ILGeneration.csproj" />
     <ProjectReference Include="..\Brainfuck.Core\Brainfuck.Core.csproj" />
   </ItemGroup>
 

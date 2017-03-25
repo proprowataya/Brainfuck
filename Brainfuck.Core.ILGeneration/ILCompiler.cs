@@ -8,7 +8,7 @@ using System.Reflection;
 using System.Reflection.Emit;
 using System.Text;
 
-namespace Brainfuck.Core
+namespace Brainfuck.Core.ILGeneration
 {
     public sealed class ILCompiler
     {

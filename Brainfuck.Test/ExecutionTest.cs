@@ -1,8 +1,9 @@
+using Brainfuck.Core;
+using Brainfuck.Core.ILGeneration;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using Xunit;
-using Brainfuck.Core;
-using System.Collections.Generic;
 
 namespace Brainfuck.Test
 {

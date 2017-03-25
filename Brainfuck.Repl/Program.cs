@@ -1,4 +1,5 @@
 ﻿using Brainfuck.Core;
+using Brainfuck.Core.ILGeneration;
 using Brainfuck.Core.Syntax;
 using System;
 using System.Diagnostics;

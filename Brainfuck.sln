@@ -1,11 +1,13 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.26228.4
+VisualStudioVersion = 15.0.26228.9
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Brainfuck.Repl", "Brainfuck.Repl\Brainfuck.Repl.csproj", "{4542AD74-1269-4526-97C6-AC2843CDEEC4}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Brainfuck.Core", "Brainfuck.Core\Brainfuck.Core.csproj", "{1DF11143-1386-40E8-AC62-EEDD7A0243C2}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Brainfuck.Core.ILGeneration", "Brainfuck.Core.ILGeneration\Brainfuck.Core.ILGeneration.csproj", "{6EC1D996-DC90-47A6-967A-6C40EA80BDE6}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Brainfuck.Test", "Brainfuck.Test\Brainfuck.Test.csproj", "{BCAAC991-8F6C-4857-BECB-82B478FCD015}"
 EndProject
@@ -23,6 +25,10 @@ Global
 		{1DF11143-1386-40E8-AC62-EEDD7A0243C2}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1DF11143-1386-40E8-AC62-EEDD7A0243C2}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1DF11143-1386-40E8-AC62-EEDD7A0243C2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6EC1D996-DC90-47A6-967A-6C40EA80BDE6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6EC1D996-DC90-47A6-967A-6C40EA80BDE6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6EC1D996-DC90-47A6-967A-6C40EA80BDE6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6EC1D996-DC90-47A6-967A-6C40EA80BDE6}.Release|Any CPU.Build.0 = Release|Any CPU
 		{BCAAC991-8F6C-4857-BECB-82B478FCD015}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{BCAAC991-8F6C-4857-BECB-82B478FCD015}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{BCAAC991-8F6C-4857-BECB-82B478FCD015}.Release|Any CPU.ActiveCfg = Release|Any CPU
