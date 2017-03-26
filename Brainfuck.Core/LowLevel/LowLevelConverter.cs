@@ -40,7 +40,7 @@ namespace Brainfuck.Core.LowLevel
                 int end = Builder.Count - 1;
 
                 // Correct jump address
-                Builder[begin] = new LowLevelOperation(Opcode.BrFalse, src: op.Src.Offset, value: end);
+                Builder[begin] = new LowLevelOperation(Opcode.BrFalse, src: (short)op.Src.Offset, value: (short)end);
             }
 
             public void Visit(RoopUnitOperation op)
@@ -49,10 +49,10 @@ namespace Brainfuck.Core.LowLevel
                 Builder.Add(default(LowLevelOperation));    // Dummy
                 EmitOperations(op.Operations, op.PtrChange);
                 int end = Builder.Count;
-                Builder.Add(new LowLevelOperation(Opcode.BrTrue, src: op.Src.Offset, value: begin));
+                Builder.Add(new LowLevelOperation(Opcode.BrTrue, src: (short)op.Src.Offset, value: (short)begin));
 
                 // Correct jump address
-                Builder[begin] = new LowLevelOperation(Opcode.BrFalse, src: op.Src.Offset, value: end);
+                Builder[begin] = new LowLevelOperation(Opcode.BrFalse, src: (short)op.Src.Offset, value: (short)end);
             }
 
             public void EmitOperations(ImmutableArray<IOperation> operations, int ptrChange)
@@ -74,33 +74,33 @@ namespace Brainfuck.Core.LowLevel
             {
                 if (ptrChange != 0)
                 {
-                    Builder.Add(new LowLevelOperation(Opcode.AddPtr, value: ptrChange));
+                    Builder.Add(new LowLevelOperation(Opcode.AddPtr, value: (short)ptrChange));
                 }
             }
 
             public void Visit(AssignOperation op)
             {
-                Builder.Add(new LowLevelOperation(Opcode.Assign, dest: op.Dest.Offset, value: op.Value));
+                Builder.Add(new LowLevelOperation(Opcode.Assign, dest: (short)op.Dest.Offset, value: (short)op.Value));
             }
 
             public void Visit(AddAssignOperation op)
             {
-                Builder.Add(new LowLevelOperation(Opcode.AddAssign, dest: op.Dest.Offset, value: op.Value));
+                Builder.Add(new LowLevelOperation(Opcode.AddAssign, dest: (short)op.Dest.Offset, value: (short)op.Value));
             }
 
             public void Visit(MultAddAssignOperation op)
             {
-                Builder.Add(new LowLevelOperation(Opcode.MultAddAssign, dest: op.Dest.Offset, src: op.Src.Offset, value: op.Value));
+                Builder.Add(new LowLevelOperation(Opcode.MultAddAssign, dest: (short)op.Dest.Offset, src: (short)op.Src.Offset, value: (short)op.Value));
             }
 
             public void Visit(PutOperation op)
             {
-                Builder.Add(new LowLevelOperation(Opcode.Put, src: op.Src.Offset));
+                Builder.Add(new LowLevelOperation(Opcode.Put, src: (short)op.Src.Offset));
             }
 
             public void Visit(ReadOperation op)
             {
-                Builder.Add(new LowLevelOperation(Opcode.Read, dest: op.Dest.Offset));
+                Builder.Add(new LowLevelOperation(Opcode.Read, dest: (short)op.Dest.Offset));
             }
         }
     }

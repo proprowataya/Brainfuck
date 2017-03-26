@@ -10,64 +10,63 @@ namespace Brainfuck.Core.LowLevel
         private unsafe void ExecuteUnsafeInt32(ImmutableArray<LowLevelOperation> operations, CancellationToken token)
         {
             Int32[] buffer = new Int32[Setting.BufferSize];
-            long step = -1;
+            long step = 0;
 
-            fixed (LowLevelOperation* ops = operations.ToArray())
+            fixed (LowLevelOperation* opBase = operations.ToArray())
             fixed (Int32* ptrBase = buffer)
             {
                 Int32* ptr = ptrBase;
-                step++;
+                LowLevelOperation* op = opBase, opEnd = opBase + operations.Length;
                 OnStepStart?.Invoke(new OnStepStartEventArgs((int)(ptr - ptrBase), step, null, new ArrayView<Int32>(buffer)));  // TODO
                 token.ThrowIfCancellationRequested();
 
-                for (int i = 0; i < operations.Length; i++)
+                for (; op < opEnd; op++, step++)
                 {
-                    LowLevelOperation op = ops[i];
-                    switch (op.Opcode)
+                    switch (op->Opcode)
                     {
                         case Opcode.AddPtr:
                             {
-                                ptr += op.Value;
+                                ptr += op->Value;
                                 break;
                             }
                         case Opcode.Assign:
                             {
-                                ptr[op.Dest] = op.Value;
+                                ptr[op->Dest] = op->Value;
                                 break;
                             }
                         case Opcode.AddAssign:
                             {
-                                ptr[op.Dest] += op.Value;
+                                ptr[op->Dest] += op->Value;
                                 break;
                             }
                         case Opcode.MultAddAssign:
                             {
-                                ptr[op.Dest] += ptr[op.Src] * op.Value;
+                                ptr[op->Dest] += ptr[op->Src] * op->Value;
                                 break;
                             }
                         case Opcode.Put:
                             {
-                                Put((char)ptr[op.Src]);
+                                Put((char)ptr[op->Src]);
                                 break;
                             }
                         case Opcode.Read:
                             {
-                                ptr[op.Dest] = Read();
+                                ptr[op->Dest] = Read();
                                 break;
                             }
                         case Opcode.BrTrue:
                             {
-                                if (ptr[op.Src] != 0)
+                                if (ptr[op->Src] != 0)
                                 {
-                                    i = op.Value;
+                                    op = opBase + op->Value;
                                 }
                                 break;
                             }
                         case Opcode.BrFalse:
                             {
-                                if (ptr[op.Src] == 0)
+                                if (ptr[op->Src] == 0)
                                 {
-                                    i = op.Value;
+                                    op = opBase + op->Value;
                                 }
                                 break;
                             }
@@ -83,64 +82,63 @@ namespace Brainfuck.Core.LowLevel
         private unsafe void ExecuteUnsafeInt64(ImmutableArray<LowLevelOperation> operations, CancellationToken token)
         {
             Int64[] buffer = new Int64[Setting.BufferSize];
-            long step = -1;
+            long step = 0;
 
-            fixed (LowLevelOperation* ops = operations.ToArray())
+            fixed (LowLevelOperation* opBase = operations.ToArray())
             fixed (Int64* ptrBase = buffer)
             {
                 Int64* ptr = ptrBase;
-                step++;
+                LowLevelOperation* op = opBase, opEnd = opBase + operations.Length;
                 OnStepStart?.Invoke(new OnStepStartEventArgs((int)(ptr - ptrBase), step, null, new ArrayView<Int64>(buffer)));  // TODO
                 token.ThrowIfCancellationRequested();
 
-                for (int i = 0; i < operations.Length; i++)
+                for (; op < opEnd; op++, step++)
                 {
-                    LowLevelOperation op = ops[i];
-                    switch (op.Opcode)
+                    switch (op->Opcode)
                     {
                         case Opcode.AddPtr:
                             {
-                                ptr += op.Value;
+                                ptr += op->Value;
                                 break;
                             }
                         case Opcode.Assign:
                             {
-                                ptr[op.Dest] = op.Value;
+                                ptr[op->Dest] = op->Value;
                                 break;
                             }
                         case Opcode.AddAssign:
                             {
-                                ptr[op.Dest] += op.Value;
+                                ptr[op->Dest] += op->Value;
                                 break;
                             }
                         case Opcode.MultAddAssign:
                             {
-                                ptr[op.Dest] += ptr[op.Src] * op.Value;
+                                ptr[op->Dest] += ptr[op->Src] * op->Value;
                                 break;
                             }
                         case Opcode.Put:
                             {
-                                Put((char)ptr[op.Src]);
+                                Put((char)ptr[op->Src]);
                                 break;
                             }
                         case Opcode.Read:
                             {
-                                ptr[op.Dest] = Read();
+                                ptr[op->Dest] = Read();
                                 break;
                             }
                         case Opcode.BrTrue:
                             {
-                                if (ptr[op.Src] != 0)
+                                if (ptr[op->Src] != 0)
                                 {
-                                    i = op.Value;
+                                    op = opBase + op->Value;
                                 }
                                 break;
                             }
                         case Opcode.BrFalse:
                             {
-                                if (ptr[op.Src] == 0)
+                                if (ptr[op->Src] == 0)
                                 {
-                                    i = op.Value;
+                                    op = opBase + op->Value;
                                 }
                                 break;
                             }

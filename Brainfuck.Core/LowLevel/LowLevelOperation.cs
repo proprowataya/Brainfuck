@@ -3,11 +3,11 @@
     public struct LowLevelOperation
     {
         public Opcode Opcode { get; }
-        public int Dest { get; }
-        public int Src { get; }
-        public int Value { get; }
+        public short Dest { get; }
+        public short Src { get; }
+        public short Value { get; }
 
-        public LowLevelOperation(Opcode opcode, int dest = 0, int src = 0, int value = 0)
+        public LowLevelOperation(Opcode opcode, short dest = 0, short src = 0, short value = 0)
         {
             Opcode = opcode;
             Dest = dest;
@@ -18,7 +18,7 @@
         public override string ToString() => $"{Opcode} {Dest}, {Src}, {Value}";
     }
 
-    public enum Opcode
+    public enum Opcode : short
     {
         AddPtr,
         Assign,
