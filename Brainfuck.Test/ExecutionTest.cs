@@ -1,5 +1,6 @@
 using Brainfuck.Core;
 using Brainfuck.Core.ILGeneration;
+using Brainfuck.Core.LowLevel;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -104,6 +105,13 @@ namespace Brainfuck.Test
                             Optimize
                         };
 
+                        yield return new object[]
+                        {
+                            new { Type, Optimize },
+                            GetLowLevelInterpreterAction(Type),
+                            Optimize
+                        };
+
                         foreach (var Unsafe in new[] { false, true })
                         {
                             yield return new object[]
@@ -121,6 +129,15 @@ namespace Brainfuck.Test
         private static Action<Module> GetInterpreterAction(Type elementType)
         {
             return module => new Interpreter(Setting.Default.WithElementType(elementType).WithBufferSize(1)).Execute(module);
+        }
+
+        private static Action<Module> GetLowLevelInterpreterAction(Type elementType)
+        {
+            return module =>
+            {
+                Setting setting = Setting.Default.WithElementType(elementType).WithBufferSize(1);
+                new LowLevelInterpreter(setting).Execute(module.Root.ToLowLevel(setting));
+            };
         }
 
         private static Action<Module> GetILCompilerAction(Setting setting)
