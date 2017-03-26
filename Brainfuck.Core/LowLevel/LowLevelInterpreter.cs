@@ -6,7 +6,7 @@ using System.Threading;
 
 namespace Brainfuck.Core.LowLevel
 {
-    public class LowLevelInterpreter
+    public partial class LowLevelInterpreter
     {
         public Setting Setting { get; }
         public event OnStepStartEventHandler OnStepStart;   // TODO
@@ -28,11 +28,25 @@ namespace Brainfuck.Core.LowLevel
             }
             else if (Setting.ElementType == typeof(Int32))
             {
-                Execute<Int32, Int32Operator>(operations, token);
+                if (Setting.UnsafeCode)
+                {
+                    ExecuteUnsafeInt32(operations, token);
+                }
+                else
+                {
+                    Execute<Int32, Int32Operator>(operations, token);
+                }
             }
             else if (Setting.ElementType == typeof(Int64))
             {
-                Execute<Int64, Int64Operator>(operations, token);
+                if (Setting.UnsafeCode)
+                {
+                    ExecuteUnsafeInt64(operations, token);
+                }
+                else
+                {
+                    Execute<Int64, Int64Operator>(operations, token);
+                }
             }
             else
             {

@@ -23,6 +23,8 @@ namespace Brainfuck.Repl
                     {
                         RunByILCompiler(source, printHeader: true, overrideUnsafeCode: true);
                         RunByILCompiler(source, printHeader: true, overrideUnsafeCode: false);
+                        RunByLowLevelInterpreter(source, printHeader: true, overrideUnsafeCode: true);
+                        RunByLowLevelInterpreter(source, printHeader: true, overrideUnsafeCode: false);
                         RunByInterpreter(source, printHeader: true);
                     }
                     else

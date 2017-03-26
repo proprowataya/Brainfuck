@@ -105,15 +105,15 @@ namespace Brainfuck.Test
                             Optimize
                         };
 
-                        yield return new object[]
-                        {
-                            new { Type, Optimize },
-                            GetLowLevelInterpreterAction(Type),
-                            Optimize
-                        };
-
                         foreach (var Unsafe in new[] { false, true })
                         {
+                            yield return new object[]
+                            {
+                                new { Type, Optimize, Unsafe },
+                                GetLowLevelInterpreterAction(Type, Unsafe),
+                                Optimize
+                            };
+
                             yield return new object[]
                             {
                                 new { Type, Optimize, Unsafe },
@@ -131,11 +131,20 @@ namespace Brainfuck.Test
             return module => new Interpreter(Setting.Default.WithElementType(elementType).WithBufferSize(1)).Execute(module);
         }
 
-        private static Action<Module> GetLowLevelInterpreterAction(Type elementType)
+        private static Action<Module> GetLowLevelInterpreterAction(Type elementType, bool unsafeCode)
         {
             return module =>
             {
-                Setting setting = Setting.Default.WithElementType(elementType).WithBufferSize(1);
+                Setting setting = Setting.Default.WithElementType(elementType);
+                if (unsafeCode)
+                {
+                    setting = setting.WithUnsafeCode(true);
+                }
+                else
+                {
+                    setting = setting.WithBufferSize(1);
+                }
+
                 new LowLevelInterpreter(setting).Execute(module.Root.ToLowLevel(setting));
             };
         }

@@ -1,5 +1,6 @@
 ﻿using Brainfuck.Core;
 using Brainfuck.Core.ILGeneration;
+using Brainfuck.Core.LowLevel;
 using Brainfuck.Core.Syntax;
 using System;
 using System.Diagnostics;
@@ -71,6 +72,19 @@ namespace Brainfuck.Repl
                 Action action = compiler.Compile(module);
                 return action;
             }, printHeader ? $"===== Compiler (System.Reflection.Emit{(unsafeCode ? ", unsafe" : "")}) =====" : null);
+        }
+
+        protected void RunByLowLevelInterpreter(string source, bool printHeader, bool? overrideUnsafeCode = null)
+        {
+            bool unsafeCode = overrideUnsafeCode ?? !command.CheckRange;
+            Setting usingSetting = setting.WithUnsafeCode(unsafeCode);
+
+            StartProgram(() =>
+            {
+                Module module = ParseSource(source, Favor.ILSafe);
+                LowLevelInterpreter interpreter = new LowLevelInterpreter(usingSetting);
+                return () => interpreter.Execute(module.Root.ToLowLevel(usingSetting));
+            }, printHeader ? $"===== LowLevelInterpreter {(unsafeCode ? "(unsafe) " : "")} =====" : null);
         }
 
         protected void RunByInterpreter(string source, bool printHeader)
