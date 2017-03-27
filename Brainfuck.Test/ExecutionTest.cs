@@ -1,5 +1,6 @@
 using Brainfuck.Core;
 using Brainfuck.Core.ILGeneration;
+using Brainfuck.Core.Interpretation;
 using Brainfuck.Core.LowLevel;
 using System;
 using System.Collections.Generic;
@@ -110,13 +111,6 @@ namespace Brainfuck.Test
                             yield return new object[]
                             {
                                 new { Type, Optimize, Unsafe },
-                                GetLowLevelInterpreterAction(Type, Unsafe),
-                                Optimize
-                            };
-
-                            yield return new object[]
-                            {
-                                new { Type, Optimize, Unsafe },
                                 GetILCompilerAction(Setting.Default.WithElementType(Type).WithUnsafeCode(Unsafe)),
                                 Optimize
                             };
@@ -128,25 +122,8 @@ namespace Brainfuck.Test
 
         private static Action<Module> GetInterpreterAction(Type elementType)
         {
-            return module => new Interpreter(Setting.Default.WithElementType(elementType).WithBufferSize(1)).Execute(module);
-        }
-
-        private static Action<Module> GetLowLevelInterpreterAction(Type elementType, bool unsafeCode)
-        {
-            return module =>
-            {
-                Setting setting = Setting.Default.WithElementType(elementType);
-                if (unsafeCode)
-                {
-                    setting = setting.WithUnsafeCode(true);
-                }
-                else
-                {
-                    setting = setting.WithBufferSize(1);
-                }
-
-                new LowLevelInterpreter(setting).Execute(module.Root.ToLowLevel(setting));
-            };
+            Setting setting = Setting.Default.WithElementType(elementType).WithBufferSize(1);
+            return module => new Interpreter(setting).Execute(module.Root.ToLowLevel(setting));
         }
 
         private static Action<Module> GetILCompilerAction(Setting setting)

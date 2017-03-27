@@ -1,17 +1,16 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using Brainfuck.Core.LowLevel;
+using System;
 using System.Collections.Immutable;
-using System.Text;
 using System.Threading;
 
-namespace Brainfuck.Core.LowLevel
+namespace Brainfuck.Core.Interpretation
 {
-    public partial class LowLevelInterpreter
+    public partial class Interpreter
     {
         public Setting Setting { get; }
-        public event OnStepStartEventHandler OnStepStart;   // TODO
+        public event OnStepStartEventHandler OnStepStart;
 
-        public LowLevelInterpreter(Setting setting)
+        public Interpreter(Setting setting)
         {
             Setting = setting;
         }
@@ -63,6 +62,7 @@ namespace Brainfuck.Core.LowLevel
 
             for (int i = 0; i < operations.Length; i++, step++)
             {
+                OnStepStart?.Invoke(new OnStepStartEventArgs(buffer, ptr, i, step));
                 token.ThrowIfCancellationRequested();
 
                 LowLevelOperation op = operations[i];

@@ -1,11 +1,12 @@
-﻿using System;
+﻿using Brainfuck.Core.LowLevel;
+using System;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
 
-namespace Brainfuck.Core.LowLevel
+namespace Brainfuck.Core.Interpretation
 {
-    public unsafe partial class LowLevelInterpreter
+    public unsafe partial class Interpreter
     {
         private unsafe void ExecuteUnsafeInt32(ImmutableArray<LowLevelOperation> operations, CancellationToken token)
         {
@@ -20,7 +21,7 @@ namespace Brainfuck.Core.LowLevel
 
                 for (; op < opEnd; op++, step++)
                 {
-                    OnStepStart?.Invoke(new OnStepStartEventArgs(*op, new ArrayView<Int32>(buffer), (int)(ptr - ptrBase), step));
+                    OnStepStart?.Invoke(new OnStepStartEventArgs(buffer, (int)(ptr - ptrBase), (int)(op - opBase), step));
                     token.ThrowIfCancellationRequested();
 
                     switch (op->Opcode)
@@ -93,7 +94,7 @@ namespace Brainfuck.Core.LowLevel
 
                 for (; op < opEnd; op++, step++)
                 {
-                    OnStepStart?.Invoke(new OnStepStartEventArgs(*op, new ArrayView<Int64>(buffer), (int)(ptr - ptrBase), step));
+                    OnStepStart?.Invoke(new OnStepStartEventArgs(buffer, (int)(ptr - ptrBase), (int)(op - opBase), step));
                     token.ThrowIfCancellationRequested();
 
                     switch (op->Opcode)

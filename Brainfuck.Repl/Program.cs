@@ -1,10 +1,11 @@
 ﻿using Brainfuck.Core;
 using Brainfuck.Core.ILGeneration;
+using Brainfuck.Core.Interpretation;
 using Brainfuck.Core.LowLevel;
 using Brainfuck.Core.Syntax;
 using System;
+using System.Collections.Immutable;
 using System.Diagnostics;
-using System.Linq;
 using System.Text;
 using System.Threading;
 
@@ -74,39 +75,30 @@ namespace Brainfuck.Repl
             }, printHeader ? $"===== Compiler (System.Reflection.Emit{(unsafeCode ? ", unsafe" : "")}) =====" : null);
         }
 
-        protected void RunByLowLevelInterpreter(string source, bool printHeader, bool? overrideUnsafeCode = null)
+        protected void RunByInterpreter(string source, bool printHeader, bool? overrideUnsafeCode = null)
         {
             bool unsafeCode = overrideUnsafeCode ?? !command.CheckRange;
-            Setting usingSetting = setting.WithUnsafeCode(unsafeCode);
-
-            StartProgram(() =>
+            Setting setting = this.setting.WithUnsafeCode(unsafeCode);  // overwrite
+            if (command.StepExecution)
             {
-                Module module = ParseSource(source, Favor.ILSafe);
-                LowLevelInterpreter interpreter = new LowLevelInterpreter(usingSetting);
-                return () => interpreter.Execute(module.Root.ToLowLevel(usingSetting));
-            }, printHeader ? $"===== LowLevelInterpreter {(unsafeCode ? "(unsafe) " : "")} =====" : null);
-        }
+                setting = setting.WithBufferSize(1);
+            }
 
-        protected void RunByInterpreter(string source, bool printHeader)
-        {
             StartProgram(() =>
             {
                 Module module = ParseSource(source, Favor.Interpreter);
-                Setting usingSetting = setting;
+                ImmutableArray<LowLevelOperation> operations = module.Root.ToLowLevel(setting);
+                CancellationToken token = CancellationToken.None;
+                Interpreter interpreter = new Interpreter(setting);
 
                 if (command.StepExecution)
                 {
-                    usingSetting = usingSetting.WithBufferSize(1);
-                }
+                    var cts = new CancellationTokenSource();
+                    token = cts.Token;
 
-                var cts = new CancellationTokenSource();
-                Interpreter interpreter = new Interpreter(usingSetting);
-
-                if (command.StepExecution)
-                {
                     interpreter.OnStepStart += arg =>
                     {
-                        PrintOnStepStartEventArgs(arg);
+                        PrintOnStepStartEventArgs(arg, operations);
                         ConsoleKeyInfo key = Console.ReadKey();
 
                         if (key.Key == ConsoleKey.Escape)
@@ -120,14 +112,14 @@ namespace Brainfuck.Repl
                 {
                     try
                     {
-                        interpreter.Execute(module, cts.Token);
+                        interpreter.Execute(operations, token);
                     }
                     catch (OperationCanceledException)
                     {
                         // Do nothing
                     }
                 };
-            }, printHeader ? "===== Interpreter =====" : null);
+            }, printHeader ? $"===== Interpreter{(unsafeCode ? " (unsafe)" : "")} =====" : null);
         }
 
         private static void StartProgram(Func<Action> generator, string message)
@@ -186,25 +178,25 @@ namespace Brainfuck.Repl
             return false;
         }
 
-        protected static void PrintOnStepStartEventArgs(OnStepStartEventArgs args)
+        protected static void PrintOnStepStartEventArgs(OnStepStartEventArgs args, ImmutableArray<LowLevelOperation> operations)
         {
-            Console.Error.Write($"{args.Step,4}: {("[" + args.Operation.GetType().Name + "]").PadRight(24)} ");
+            Console.Error.Write($"{args.Step,4}: {("[" + operations[args.ProgramPointer] + "]").PadRight(24)} ");
 
             Console.Error.Write("Buffer = { ");
-            for (int i = 0; i < args.Buffer.Count; i++)
+            for (int i = 0; i < args.Buffer.Length; i++)
             {
                 if (i > 0)
                 {
                     Console.Error.Write(", ");
                 }
 
-                if (i == args.Pointer)
+                if (i == args.BufferPointer)
                 {
                     Console.BackgroundColor = ConsoleColor.White;
                     Console.ForegroundColor = ConsoleColor.Black;
                 }
 
-                Console.Error.Write(args.Buffer[i]);
+                Console.Error.Write(args.Buffer.GetValue(i));
                 Console.ResetColor();
             }
             Console.Error.WriteLine(" }");
