@@ -149,7 +149,7 @@ namespace Brainfuck.Core
             {
                 token.ThrowIfCancellationRequested();
                 EnsureBufferCapacity(op);
-                parent.OnStepStart?.Invoke(new OnStepStartEventArgs(ptr, step, op, new ArrayView<T>(buffer)));
+                parent.OnStepStart?.Invoke(new OnStepStartEventArgs(op, new ArrayView<T>(buffer), ptr, step));
                 step++;
             }
 
@@ -186,52 +186,6 @@ namespace Brainfuck.Core
         private static int Read() => Console.Read();
         private static void Put(char value) => Console.Write(value);
     }
-
-    #region Event Handler
-
-    public delegate void OnStepStartEventHandler(OnStepStartEventArgs args);
-
-    public sealed class OnStepStartEventArgs
-    {
-        public int Pointer { get; }
-        public long Step { get; }
-        public IOperation Operation { get; }
-        public IReadOnlyList<object> Buffer { get; }
-
-        public OnStepStartEventArgs(int pointer, long step, IOperation operation, IReadOnlyList<object> buffer)
-        {
-            Pointer = pointer;
-            Step = step;
-            Operation = operation;
-            Buffer = buffer;
-        }
-    }
-
-    internal struct ArrayView<T> : IReadOnlyList<object>
-    {
-        private readonly T[] _array;
-
-        public ArrayView(T[] array)
-        {
-            _array = array;
-        }
-
-        public int Length => _array.Length;
-        public object this[int index] => _array[index];
-        int IReadOnlyCollection<object>.Count => _array.Length;
-
-        public IEnumerator<object> GetEnumerator()
-        {
-            for (int i = 0; i < _array.Length; i++)
-            {
-                yield return _array[i];
-            }
-        }
-
-        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
-    }
-
-    #endregion
 
     #region Operator
 

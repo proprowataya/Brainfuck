@@ -17,11 +17,12 @@ namespace Brainfuck.Core.LowLevel
             {
                 Int32* ptr = ptrBase;
                 LowLevelOperation* op = opBase, opEnd = opBase + operations.Length;
-                OnStepStart?.Invoke(new OnStepStartEventArgs((int)(ptr - ptrBase), step, null, new ArrayView<Int32>(buffer)));  // TODO
-                token.ThrowIfCancellationRequested();
 
                 for (; op < opEnd; op++, step++)
                 {
+                    OnStepStart?.Invoke(new OnStepStartEventArgs(*op, new ArrayView<Int32>(buffer), (int)(ptr - ptrBase), step));
+                    token.ThrowIfCancellationRequested();
+
                     switch (op->Opcode)
                     {
                         case Opcode.AddPtr:
@@ -89,11 +90,12 @@ namespace Brainfuck.Core.LowLevel
             {
                 Int64* ptr = ptrBase;
                 LowLevelOperation* op = opBase, opEnd = opBase + operations.Length;
-                OnStepStart?.Invoke(new OnStepStartEventArgs((int)(ptr - ptrBase), step, null, new ArrayView<Int64>(buffer)));  // TODO
-                token.ThrowIfCancellationRequested();
 
                 for (; op < opEnd; op++, step++)
                 {
+                    OnStepStart?.Invoke(new OnStepStartEventArgs(*op, new ArrayView<Int64>(buffer), (int)(ptr - ptrBase), step));
+                    token.ThrowIfCancellationRequested();
+
                     switch (op->Opcode)
                     {
                         case Opcode.AddPtr:
