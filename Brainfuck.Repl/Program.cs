@@ -64,12 +64,13 @@ namespace Brainfuck.Repl
 
         protected void RunByILCompiler(string source, bool printHeader, bool? overrideUnsafeCode = null)
         {
-            bool unsafeCode = overrideUnsafeCode ?? !command.CheckRange;
+            bool unsafeCode = overrideUnsafeCode ?? this.setting.UnsafeCode;
+            Setting setting = this.setting.WithUnsafeCode(unsafeCode);  // overwrite
 
             StartProgram(() =>
             {
                 Module module = ParseSource(source, Favor.ILSafe);
-                ILCompiler compiler = new ILCompiler(setting.WithUnsafeCode(unsafeCode));
+                ILCompiler compiler = new ILCompiler(setting);
                 Action action = compiler.Compile(module);
                 return action;
             }, printHeader ? $"===== Compiler (System.Reflection.Emit{(unsafeCode ? ", unsafe" : "")}) =====" : null);
@@ -77,11 +78,11 @@ namespace Brainfuck.Repl
 
         protected void RunByInterpreter(string source, bool printHeader, bool? overrideUnsafeCode = null)
         {
-            bool unsafeCode = overrideUnsafeCode ?? !command.CheckRange;
+            bool unsafeCode = overrideUnsafeCode ?? (this.setting.UnsafeCode && !command.StepExecution);
             Setting setting = this.setting.WithUnsafeCode(unsafeCode);  // overwrite
             if (command.StepExecution)
             {
-                setting = setting.WithBufferSize(1);
+                setting = setting.WithBufferSize(1).WithUseDynamicBuffer(true);
             }
 
             StartProgram(() =>

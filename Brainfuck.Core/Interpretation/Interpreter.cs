@@ -118,7 +118,16 @@ namespace Brainfuck.Core.Interpretation
                             break;
                         }
                     case Opcode.EnsureBuffer:
-                        throw new NotImplementedException();
+                        {
+                            int maxIndex = ptr + op.Value;
+                            if (maxIndex >= buffer.Length)
+                            {
+                                T[] newBuffer = new T[Math.Max(maxIndex + 1, buffer.Length + buffer.Length / 2)];
+                                Array.Copy(buffer, newBuffer, buffer.Length);
+                                buffer = newBuffer;
+                            }
+                            break;
+                        }
                     default:
                         throw new InvalidOperationException();
                 }

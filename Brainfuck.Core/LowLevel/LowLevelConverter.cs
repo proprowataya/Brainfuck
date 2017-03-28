@@ -57,6 +57,29 @@ namespace Brainfuck.Core.LowLevel
 
             public void EmitOperations(ImmutableArray<IOperation> operations, int ptrChange)
             {
+                if (setting.UseDynamicBuffer)
+                {
+                    // Compute max offset difference
+                    int maxOffsetDiff = ptrChange;
+                    for (int i = 0; i < operations.Length; i++)
+                    {
+                        if (operations[i] is IReadOperation read)
+                        {
+                            maxOffsetDiff = Math.Max(maxOffsetDiff, read.Src.Offset);
+                        }
+
+                        if (operations[i] is IWriteOperation write)
+                        {
+                            maxOffsetDiff = Math.Max(maxOffsetDiff, write.Dest.Offset);
+                        }
+                    }
+
+                    if (maxOffsetDiff > 0)
+                    {
+                        Builder.Add(new LowLevelOperation(Opcode.EnsureBuffer, value: (short)maxOffsetDiff));
+                    }
+                }
+
                 for (int i = 0; i < operations.Length; i++)
                 {
                     operations[i].Accept(this);
