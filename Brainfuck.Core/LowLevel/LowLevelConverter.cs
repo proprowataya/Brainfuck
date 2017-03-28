@@ -12,14 +12,89 @@ namespace Brainfuck.Core.LowLevel
         {
             var visitor = new Visitor(setting);
             operation.Accept(visitor);
-            return visitor.Builder.ToImmutable();
+
+            IReadOnlyList<LowLevelOperation> list = visitor.list;
+            if (setting.UseDynamicBuffer)
+            {
+                list = AddEnsureBufferCode(list);
+            }
+
+            return list.ToImmutableArray();
+        }
+
+        private static IReadOnlyList<LowLevelOperation> AddEnsureBufferCode(IReadOnlyList<LowLevelOperation> list)
+        {
+            var result = new List<LowLevelOperation>();
+            var delayed = new List<(LowLevelOperation operation, int originalIndex)>();
+            int offset = 0, maxOffsetDiff = 0;
+            var addressMap = new Dictionary<int, int>();
+
+            void EmitDelayedOperations()
+            {
+                if (maxOffsetDiff > 0)
+                {
+                    result.Add(new LowLevelOperation(Opcode.EnsureBuffer, value: (short)maxOffsetDiff));
+                }
+
+                foreach (var t in delayed)
+                {
+                    addressMap[t.originalIndex] = result.Count;
+                    result.Add(t.operation);
+                }
+
+                delayed.Clear();
+                offset = 0;
+                maxOffsetDiff = 0;
+            }
+
+            for (int i = 0; i < list.Count; i++)
+            {
+                LowLevelOperation op = list[i];
+
+                if (op.Opcode == Opcode.BrTrue || op.Opcode == Opcode.BrFalse)
+                {
+                    EmitDelayedOperations();
+                }
+
+                delayed.Add((op, i));
+                maxOffsetDiff = Math.Max(maxOffsetDiff, offset + Math.Max(op.Src, op.Dest));
+
+                if (op.Opcode == Opcode.AddPtr)
+                {
+                    offset += op.Value;
+                    maxOffsetDiff = Math.Max(maxOffsetDiff, offset);
+                }
+                else if (op.Opcode == Opcode.BrTrue || op.Opcode == Opcode.BrFalse)
+                {
+                    EmitDelayedOperations();
+                }
+            }
+
+            EmitDelayedOperations();
+
+            // Correct jump addresses
+            for (int i = 0; i < result.Count; i++)
+            {
+                switch (result[i].Opcode)
+                {
+                    case Opcode.BrTrue:
+                    case Opcode.BrFalse:
+                        result[i] = new LowLevelOperation(result[i].Opcode,
+                                                            src: result[i].Src,
+                                                            dest: result[i].Dest,
+                                                            value: (short)addressMap[result[i].Value]);
+                        break;
+                    default:
+                        break;
+                }
+            }
+
+            return result;
         }
 
         private class Visitor : IVisitor
         {
-            public ImmutableArray<LowLevelOperation>.Builder Builder { get; }
-                = ImmutableArray.CreateBuilder<LowLevelOperation>();
-
+            public List<LowLevelOperation> list = new List<LowLevelOperation>();
             private readonly Setting setting;
 
             public Visitor(Setting setting)
@@ -34,52 +109,29 @@ namespace Brainfuck.Core.LowLevel
 
             public void Visit(IfTrueUnitOperation op)
             {
-                int begin = Builder.Count;
-                Builder.Add(default(LowLevelOperation));    // Dummy
+                int begin = list.Count;
+                list.Add(default(LowLevelOperation));    // Dummy
                 EmitOperations(op.Operations, op.PtrChange);
-                int end = Builder.Count - 1;
+                int end = list.Count - 1;
 
                 // Correct jump address
-                Builder[begin] = new LowLevelOperation(Opcode.BrFalse, src: (short)op.Src.Offset, value: (short)end);
+                list[begin] = new LowLevelOperation(Opcode.BrFalse, src: (short)op.Src.Offset, value: (short)end);
             }
 
             public void Visit(RoopUnitOperation op)
             {
-                int begin = Builder.Count;
-                Builder.Add(default(LowLevelOperation));    // Dummy
+                int begin = list.Count;
+                list.Add(default(LowLevelOperation));    // Dummy
                 EmitOperations(op.Operations, op.PtrChange);
-                int end = Builder.Count;
-                Builder.Add(new LowLevelOperation(Opcode.BrTrue, src: (short)op.Src.Offset, value: (short)begin));
+                int end = list.Count;
+                list.Add(new LowLevelOperation(Opcode.BrTrue, src: (short)op.Src.Offset, value: (short)begin));
 
                 // Correct jump address
-                Builder[begin] = new LowLevelOperation(Opcode.BrFalse, src: (short)op.Src.Offset, value: (short)end);
+                list[begin] = new LowLevelOperation(Opcode.BrFalse, src: (short)op.Src.Offset, value: (short)end);
             }
 
             public void EmitOperations(ImmutableArray<IOperation> operations, int ptrChange)
             {
-                if (setting.UseDynamicBuffer)
-                {
-                    // Compute max offset difference
-                    int maxOffsetDiff = ptrChange;
-                    for (int i = 0; i < operations.Length; i++)
-                    {
-                        if (operations[i] is IReadOperation read)
-                        {
-                            maxOffsetDiff = Math.Max(maxOffsetDiff, read.Src.Offset);
-                        }
-
-                        if (operations[i] is IWriteOperation write)
-                        {
-                            maxOffsetDiff = Math.Max(maxOffsetDiff, write.Dest.Offset);
-                        }
-                    }
-
-                    if (maxOffsetDiff > 0)
-                    {
-                        Builder.Add(new LowLevelOperation(Opcode.EnsureBuffer, value: (short)maxOffsetDiff));
-                    }
-                }
-
                 for (int i = 0; i < operations.Length; i++)
                 {
                     operations[i].Accept(this);
@@ -97,33 +149,33 @@ namespace Brainfuck.Core.LowLevel
             {
                 if (ptrChange != 0)
                 {
-                    Builder.Add(new LowLevelOperation(Opcode.AddPtr, value: (short)ptrChange));
+                    list.Add(new LowLevelOperation(Opcode.AddPtr, value: (short)ptrChange));
                 }
             }
 
             public void Visit(AssignOperation op)
             {
-                Builder.Add(new LowLevelOperation(Opcode.Assign, dest: (short)op.Dest.Offset, value: (short)op.Value));
+                list.Add(new LowLevelOperation(Opcode.Assign, dest: (short)op.Dest.Offset, value: (short)op.Value));
             }
 
             public void Visit(AddAssignOperation op)
             {
-                Builder.Add(new LowLevelOperation(Opcode.AddAssign, dest: (short)op.Dest.Offset, value: (short)op.Value));
+                list.Add(new LowLevelOperation(Opcode.AddAssign, dest: (short)op.Dest.Offset, value: (short)op.Value));
             }
 
             public void Visit(MultAddAssignOperation op)
             {
-                Builder.Add(new LowLevelOperation(Opcode.MultAddAssign, dest: (short)op.Dest.Offset, src: (short)op.Src.Offset, value: (short)op.Value));
+                list.Add(new LowLevelOperation(Opcode.MultAddAssign, dest: (short)op.Dest.Offset, src: (short)op.Src.Offset, value: (short)op.Value));
             }
 
             public void Visit(PutOperation op)
             {
-                Builder.Add(new LowLevelOperation(Opcode.Put, src: (short)op.Src.Offset));
+                list.Add(new LowLevelOperation(Opcode.Put, src: (short)op.Src.Offset));
             }
 
             public void Visit(ReadOperation op)
             {
-                Builder.Add(new LowLevelOperation(Opcode.Read, dest: (short)op.Dest.Offset));
+                list.Add(new LowLevelOperation(Opcode.Read, dest: (short)op.Dest.Offset));
             }
         }
     }
