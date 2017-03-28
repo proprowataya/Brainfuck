@@ -22,6 +22,7 @@ namespace Brainfuck.Repl
         public bool StepExecution { get; private set; } = false;
         public bool DebugMode { get; private set; } = false;
         public bool EmitPseudoCode { get; private set; } = false;
+        public bool EmitLowLevelIntermediationCode { get; private set; } = false;
 
         public static CommandLineArgument Parse(string[] args, out Setting setting)
         {
@@ -126,9 +127,14 @@ namespace Brainfuck.Repl
                 v => DebugMode = (v != null)
             },
             {
-                "p|pseudo",
+                "p|emit-pseudo-code",
                 "Emit pseudo code (C-like style).",
                 v => EmitPseudoCode = (v != null)
+            },
+            {
+                "l|emit-low-level-code",
+                "Emit low-level intermediate representation code.",
+                v => EmitLowLevelIntermediationCode = (v != null)
             },
             {
                 "h|help",

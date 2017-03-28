@@ -13,7 +13,7 @@ namespace Brainfuck.Repl
         {
             // TODO: Currently we execute first source
             string source = File.ReadAllText(command.FileNames.First());
-            if (EmitPseudoCodeIfNecessary(source))
+            if (EmitCodeIfNecessary(source))
             {
                 // If we emit pseudo code, we don't execute code.
                 return;

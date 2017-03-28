@@ -17,7 +17,7 @@ namespace Brainfuck.Repl
                 try
 #endif
                 {
-                    EmitPseudoCodeIfNecessary(source);
+                    EmitCodeIfNecessary(source);
 
                     if (command.DebugMode)
                     {

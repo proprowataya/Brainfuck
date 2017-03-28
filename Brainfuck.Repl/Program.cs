@@ -163,20 +163,35 @@ namespace Brainfuck.Repl
             return module;
         }
 
-        protected bool EmitPseudoCodeIfNecessary(string source)
+        protected bool EmitCodeIfNecessary(string source)
         {
+            Module module = ParseSource(source, Favor.Default);
+
             if (command.EmitPseudoCode)
             {
                 Console.Error.WriteLine();
                 Console.Out.WriteLine("/**************");
                 Console.Out.WriteLine(" * Pseudo Code");
                 Console.Out.WriteLine(" **************/");
-                Console.Out.WriteLine(ParseSource(source, Favor.Default).ToPseudoCode());
+                Console.Out.WriteLine(module.ToPseudoCode());
                 Console.Error.WriteLine();
-                return true;
+            }
+            else if (command.EmitLowLevelIntermediationCode)
+            {
+                Console.Error.WriteLine();
+                var operations = module.Root.ToLowLevel(setting.WithUseDynamicBuffer(true));
+
+                for (int i = 0; i < operations.Length; i++)
+                {
+                    Console.Out.WriteLine($"{i,4}  {operations[i]}");
+                }
+            }
+            else
+            {
+                return false;
             }
 
-            return false;
+            return true;
         }
 
         protected static void PrintOnStepStartEventArgs(OnStepStartEventArgs args, ImmutableArray<LowLevelOperation> operations)
