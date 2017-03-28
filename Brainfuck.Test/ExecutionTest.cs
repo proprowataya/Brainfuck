@@ -1,5 +1,7 @@
 using Brainfuck.Core;
 using Brainfuck.Core.ILGeneration;
+using Brainfuck.Core.Interpretation;
+using Brainfuck.Core.LowLevel;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -97,19 +99,21 @@ namespace Brainfuck.Test
                 {
                     foreach (var Optimize in new[] { false, true })
                     {
-                        yield return new object[]
-                        {
-                            new { Type, Optimize },
-                            GetInterpreterAction(Type),
-                            Optimize
-                        };
-
                         foreach (var Unsafe in new[] { false, true })
                         {
+                            Setting setting = Setting.Default.WithElementType(Type).WithUnsafeCode(Unsafe);
+
+                            yield return new object[]
+                            {
+                                new { Type, Optimize },
+                                GetInterpreterAction(setting.WithUseDynamicBuffer(!Unsafe)),
+                                Optimize
+                            };
+
                             yield return new object[]
                             {
                                 new { Type, Optimize, Unsafe },
-                                GetILCompilerAction(Setting.Default.WithElementType(Type).WithUnsafeCode(Unsafe)),
+                                GetILCompilerAction(setting),
                                 Optimize
                             };
                         }
@@ -118,9 +122,9 @@ namespace Brainfuck.Test
             }
         }
 
-        private static Action<Module> GetInterpreterAction(Type elementType)
+        private static Action<Module> GetInterpreterAction(Setting setting)
         {
-            return module => new Interpreter(Setting.Default.WithElementType(elementType).WithBufferSize(1)).Execute(module);
+            return module => new Interpreter(setting).Execute(module.Root.ToLowLevel(setting));
         }
 
         private static Action<Module> GetILCompilerAction(Setting setting)

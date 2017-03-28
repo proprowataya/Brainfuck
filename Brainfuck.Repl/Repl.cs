@@ -17,13 +17,14 @@ namespace Brainfuck.Repl
                 try
 #endif
                 {
-                    EmitPseudoCodeIfNecessary(source);
+                    EmitCodeIfNecessary(source);
 
                     if (command.DebugMode)
                     {
                         RunByILCompiler(source, printHeader: true, overrideUnsafeCode: true);
                         RunByILCompiler(source, printHeader: true, overrideUnsafeCode: false);
-                        RunByInterpreter(source, printHeader: true);
+                        RunByInterpreter(source, printHeader: true, overrideUnsafeCode: true);
+                        RunByInterpreter(source, printHeader: true, overrideUnsafeCode: false);
                     }
                     else
                     {

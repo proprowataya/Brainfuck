@@ -1,9 +1,11 @@
 ﻿using Brainfuck.Core;
 using Brainfuck.Core.ILGeneration;
+using Brainfuck.Core.Interpretation;
+using Brainfuck.Core.LowLevel;
 using Brainfuck.Core.Syntax;
 using System;
+using System.Collections.Immutable;
 using System.Diagnostics;
-using System.Linq;
 using System.Text;
 using System.Threading;
 
@@ -50,7 +52,7 @@ namespace Brainfuck.Repl
 
         protected void RunDefault(string source, bool printHeader)
         {
-            if (command.StepExecution)
+            if (command.Engine == CommandLineArgument.ExecutionEngine.Interpreter || command.StepExecution)
             {
                 RunByInterpreter(source, printHeader);
             }
@@ -62,37 +64,42 @@ namespace Brainfuck.Repl
 
         protected void RunByILCompiler(string source, bool printHeader, bool? overrideUnsafeCode = null)
         {
-            bool unsafeCode = overrideUnsafeCode ?? !command.CheckRange;
+            bool unsafeCode = overrideUnsafeCode ?? this.setting.UnsafeCode;
+            Setting setting = this.setting.WithUnsafeCode(unsafeCode);  // overwrite
 
             StartProgram(() =>
             {
                 Module module = ParseSource(source, Favor.ILSafe);
-                ILCompiler compiler = new ILCompiler(setting.WithUnsafeCode(unsafeCode));
+                ILCompiler compiler = new ILCompiler(setting);
                 Action action = compiler.Compile(module);
                 return action;
-            }, printHeader ? $"===== Compiler (System.Reflection.Emit{(unsafeCode ? ", unsafe" : "")}) =====" : null);
+            }, printHeader ? $"===== JIT (System.Reflection.Emit{(unsafeCode ? ", unsafe" : "")}) =====" : null);
         }
 
-        protected void RunByInterpreter(string source, bool printHeader)
+        protected void RunByInterpreter(string source, bool printHeader, bool? overrideUnsafeCode = null)
         {
+            bool unsafeCode = overrideUnsafeCode ?? (this.setting.UnsafeCode && !command.StepExecution);
+            Setting setting = this.setting.WithUnsafeCode(unsafeCode);  // overwrite
+            if (command.StepExecution)
+            {
+                setting = setting.WithBufferSize(1).WithUseDynamicBuffer(true);
+            }
+
             StartProgram(() =>
             {
                 Module module = ParseSource(source, Favor.Interpreter);
-                Setting usingSetting = setting;
+                ImmutableArray<LowLevelOperation> operations = module.Root.ToLowLevel(setting);
+                CancellationToken token = CancellationToken.None;
+                Interpreter interpreter = new Interpreter(setting);
 
                 if (command.StepExecution)
                 {
-                    usingSetting = usingSetting.WithBufferSize(1);
-                }
+                    var cts = new CancellationTokenSource();
+                    token = cts.Token;
 
-                var cts = new CancellationTokenSource();
-                Interpreter interpreter = new Interpreter(usingSetting);
-
-                if (command.StepExecution)
-                {
                     interpreter.OnStepStart += arg =>
                     {
-                        PrintOnStepStartEventArgs(arg);
+                        PrintOnStepStartEventArgs(arg, operations);
                         ConsoleKeyInfo key = Console.ReadKey();
 
                         if (key.Key == ConsoleKey.Escape)
@@ -106,14 +113,14 @@ namespace Brainfuck.Repl
                 {
                     try
                     {
-                        interpreter.Execute(module, cts.Token);
+                        interpreter.Execute(operations, token);
                     }
                     catch (OperationCanceledException)
                     {
                         // Do nothing
                     }
                 };
-            }, printHeader ? "===== Interpreter =====" : null);
+            }, printHeader ? $"===== Interpreter{(unsafeCode ? " (unsafe)" : "")} =====" : null);
         }
 
         private static void StartProgram(Func<Action> generator, string message)
@@ -156,41 +163,56 @@ namespace Brainfuck.Repl
             return module;
         }
 
-        protected bool EmitPseudoCodeIfNecessary(string source)
+        protected bool EmitCodeIfNecessary(string source)
         {
+            Module module = ParseSource(source, Favor.Default);
+
             if (command.EmitPseudoCode)
             {
                 Console.Error.WriteLine();
                 Console.Out.WriteLine("/**************");
                 Console.Out.WriteLine(" * Pseudo Code");
                 Console.Out.WriteLine(" **************/");
-                Console.Out.WriteLine(ParseSource(source, Favor.Default).ToPseudoCode());
+                Console.Out.WriteLine(module.ToPseudoCode());
                 Console.Error.WriteLine();
-                return true;
+            }
+            else if (command.EmitLowLevelIntermediationCode)
+            {
+                Console.Error.WriteLine();
+                var operations = module.Root.ToLowLevel(setting.WithUseDynamicBuffer(true));
+
+                for (int i = 0; i < operations.Length; i++)
+                {
+                    Console.Out.WriteLine($"{i,4}  {operations[i]}");
+                }
+            }
+            else
+            {
+                return false;
             }
 
-            return false;
+            return true;
         }
 
-        protected static void PrintOnStepStartEventArgs(OnStepStartEventArgs args)
+        protected static void PrintOnStepStartEventArgs(OnStepStartEventArgs args, ImmutableArray<LowLevelOperation> operations)
         {
-            Console.Error.Write($"{args.Step,4}: {("[" + args.Operation.GetType().Name + "]").PadRight(24)} ");
+            Console.Error.Write($"{args.Step,4}: {("[" + operations[args.ProgramPointer] + "]").PadRight(24)} ");
 
             Console.Error.Write("Buffer = { ");
-            for (int i = 0; i < args.Buffer.Count; i++)
+            for (int i = 0; i < args.Buffer.Length; i++)
             {
                 if (i > 0)
                 {
                     Console.Error.Write(", ");
                 }
 
-                if (i == args.Pointer)
+                if (i == args.BufferPointer)
                 {
                     Console.BackgroundColor = ConsoleColor.White;
                     Console.ForegroundColor = ConsoleColor.Black;
                 }
 
-                Console.Error.Write(args.Buffer[i]);
+                Console.Error.Write(args.Buffer.GetValue(i));
                 Console.ResetColor();
             }
             Console.Error.WriteLine(" }");
