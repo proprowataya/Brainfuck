@@ -73,7 +73,7 @@ namespace Brainfuck.Repl
                 ILCompiler compiler = new ILCompiler(setting);
                 Action action = compiler.Compile(module);
                 return action;
-            }, printHeader ? $"===== Compiler (System.Reflection.Emit{(unsafeCode ? ", unsafe" : "")}) =====" : null);
+            }, printHeader ? $"===== JIT (System.Reflection.Emit{(unsafeCode ? ", unsafe" : "")}) =====" : null);
         }
 
         protected void RunByInterpreter(string source, bool printHeader, bool? overrideUnsafeCode = null)
