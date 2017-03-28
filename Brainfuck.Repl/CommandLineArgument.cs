@@ -7,10 +7,16 @@ namespace Brainfuck.Repl
 {
     internal class CommandLineArgument
     {
+        public enum ExecutionEngine
+        {
+            JIT, Interpreter,
+        }
+
         public IReadOnlyList<string> FileNames { get; private set; } = null;
         public Type ElementType { get; private set; } = typeof(Int32);
         public bool Optimize { get; private set; } = true;
         public bool CheckRange { get; private set; } = false;
+        public ExecutionEngine Engine { get; private set; } = ExecutionEngine.JIT;
         public bool Help { get; private set; } = false;
         public bool Silent { get; private set; } = false;
         public bool StepExecution { get; private set; } = false;
@@ -92,6 +98,23 @@ namespace Brainfuck.Repl
                 v => Silent = (v != null)
             },
 #endif  
+            {
+                "e|engine=",
+                "Specify execution engine. If step execution is enabled, this value will be ignored. "
+                    + "By default, JIT engine will be used."
+                    + $"\n(VALUE: {string.Join(", ", Enum.GetNames(typeof(ExecutionEngine)))})",
+                v =>
+                {
+                    if (Enum.TryParse<ExecutionEngine>(v, out var engine))
+                    {
+                        Engine = engine;
+                    }
+                    else
+                    {
+                        throw new OptionException($"Unknown engine '{v}'.", "engine");
+                    }
+                }
+            },
             {
                 "s|step",
                 "Enable step execution.",

@@ -52,7 +52,7 @@ namespace Brainfuck.Repl
 
         protected void RunDefault(string source, bool printHeader)
         {
-            if (command.StepExecution)
+            if (command.Engine == CommandLineArgument.ExecutionEngine.Interpreter || command.StepExecution)
             {
                 RunByInterpreter(source, printHeader);
             }
