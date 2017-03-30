@@ -19,7 +19,7 @@ namespace Brainfuck.Core.Optimization
                 int nextPtrChange = offset - blockOriginOffset;
                 if (delayed.Count > 0 || nextPtrChange != 0)
                 {
-                    var block = new BlockUnitOperation(delayed.ToImmutableArray(), offset - blockOriginOffset);
+                    var block = new BlockUnitOperation(delayed.ToImmutableArray(), nextPtrChange);
                     list.Add(block);
                     delayed.Clear();
                     blockOriginOffset = offset;

@@ -72,7 +72,7 @@ namespace Brainfuck.Core.Optimization
                 }
 
                 // If this operation reads some memory locations,
-                // we must not to reduce currently existing opeations which write to the locations.
+                // we must not reduce currently existing opeations which write to the locations.
                 {
                     if (list.Last().operation is IReadOperation iread)
                     {
