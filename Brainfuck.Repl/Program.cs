@@ -1,7 +1,9 @@
 ﻿using Brainfuck.Core;
+using Brainfuck.Core.Analysis;
 using Brainfuck.Core.ILGeneration;
 using Brainfuck.Core.Interpretation;
 using Brainfuck.Core.LowLevel;
+using Brainfuck.Core.Optimization;
 using Brainfuck.Core.Syntax;
 using System;
 using System.Collections.Immutable;

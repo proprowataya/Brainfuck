@@ -1,10 +1,7 @@
 ﻿using Brainfuck.Core.Syntax;
-using System;
-using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Diagnostics;
 
-namespace Brainfuck.Core
+namespace Brainfuck.Core.Analysis
 {
     public static class Parser
     {

@@ -1,9 +1,6 @@
-﻿using System.Collections.Generic;
-using System.Collections;
-using Brainfuck.Core.LowLevel;
-using System;
+﻿using System;
 
-namespace Brainfuck.Core
+namespace Brainfuck.Core.Interpretation
 {
     public delegate void OnStepStartEventHandler(OnStepStartEventArgs args);
 
