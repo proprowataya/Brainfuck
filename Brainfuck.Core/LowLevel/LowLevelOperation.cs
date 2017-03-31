@@ -28,6 +28,7 @@
         Read,
         BrTrue,
         BrFalse,
+        Return,
         EnsureBuffer,
     }
 }

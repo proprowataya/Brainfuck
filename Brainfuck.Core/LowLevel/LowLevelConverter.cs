@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Linq;
 using System.Text;
 
 namespace Brainfuck.Core.LowLevel
@@ -19,7 +20,7 @@ namespace Brainfuck.Core.LowLevel
                 list = AddEnsureBufferCode(list);
             }
 
-            return list.ToImmutableArray();
+            return list.Concat(new[] { new LowLevelOperation(Opcode.Return) }).ToImmutableArray();
         }
 
         private static IReadOnlyList<LowLevelOperation> AddEnsureBufferCode(IReadOnlyList<LowLevelOperation> list)

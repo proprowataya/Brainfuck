@@ -17,9 +17,9 @@ namespace Brainfuck.Core.Interpretation
             fixed (Int32* ptrBase = buffer)
             {
                 Int32* ptr = ptrBase;
-                LowLevelOperation* op = opBase, opEnd = opBase + operations.Length;
+                LowLevelOperation* op = opBase;
 
-                for (; op < opEnd; op++, step++)
+                for (; ; op++, step++)
                 {
                     OnStepStart?.Invoke(new OnStepStartEventArgs(buffer, (int)(ptr - ptrBase), (int)(op - opBase), step));
                     token.ThrowIfCancellationRequested();
@@ -71,6 +71,10 @@ namespace Brainfuck.Core.Interpretation
                                     op = opBase + op->Value;
                                 }
                                 break;
+                            }
+                        case Opcode.Return:
+                            {
+                                return;
                             }
                         case Opcode.EnsureBuffer:
                             throw new NotImplementedException();
@@ -90,9 +94,9 @@ namespace Brainfuck.Core.Interpretation
             fixed (Int64* ptrBase = buffer)
             {
                 Int64* ptr = ptrBase;
-                LowLevelOperation* op = opBase, opEnd = opBase + operations.Length;
+                LowLevelOperation* op = opBase;
 
-                for (; op < opEnd; op++, step++)
+                for (; ; op++, step++)
                 {
                     OnStepStart?.Invoke(new OnStepStartEventArgs(buffer, (int)(ptr - ptrBase), (int)(op - opBase), step));
                     token.ThrowIfCancellationRequested();
@@ -144,6 +148,10 @@ namespace Brainfuck.Core.Interpretation
                                     op = opBase + op->Value;
                                 }
                                 break;
+                            }
+                        case Opcode.Return:
+                            {
+                                return;
                             }
                         case Opcode.EnsureBuffer:
                             throw new NotImplementedException();

@@ -60,7 +60,7 @@ namespace Brainfuck.Core.Interpretation
             int ptr = 0;
             long step = 0;
 
-            for (int i = 0; i < operations.Length; i++, step++)
+            for (int i = 0; ; i++, step++)
             {
                 OnStepStart?.Invoke(new OnStepStartEventArgs(buffer, ptr, i, step));
                 token.ThrowIfCancellationRequested();
@@ -116,6 +116,10 @@ namespace Brainfuck.Core.Interpretation
                                 i = op.Value;
                             }
                             break;
+                        }
+                    case Opcode.Return:
+                        {
+                            return;
                         }
                     case Opcode.EnsureBuffer:
                         {
