@@ -29,7 +29,6 @@ namespace Brainfuck.Core.Optimization
             for (int i = 0; i < operations.Count; i++)
             {
                 Debug.Assert(!(operations[i] is AddPtrOperation));
-                Debug.Assert(operations[i] is IReadOperation || operations[i] is IWriteOperation);
 
                 IOperation op = operations[i].WithAdd(-offset);
 
