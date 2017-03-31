@@ -34,7 +34,8 @@ namespace Brainfuck.Core.Optimization
                 IOperation op = operations[i].WithAdd(-offset);
 
                 var accessLocations = AccessLocations(op).ToArray();
-                int minLocationDiff = accessLocations.Select(l => Math.Abs(l.Offset)).Min();
+                int minLocationDiff =
+                    accessLocations.Length == 0 ? 0 : accessLocations.Select(l => Math.Abs(l.Offset)).Min();
 
                 if (minLocationDiff > PtrDiffThreshold || op is RoopUnitOperation || op is IfTrueUnitOperation)
                 {
