@@ -10,5 +10,6 @@ namespace Brainfuck.Core
         internal static readonly Type ElementType = typeof(Int32);
         internal const bool UseDynamicBuffer = false;
         internal const bool UnsafeCode = false;
+        internal const bool UseRegisterAllocation = true;
     }
 }
