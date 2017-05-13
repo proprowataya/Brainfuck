@@ -90,7 +90,7 @@ namespace Brainfuck.Repl
             StartProgram(() =>
             {
                 Module module = ParseSource(source, Favor.Interpreter);
-                ImmutableArray<LowLevelOperation> operations = module.Root.ToLowLevel(setting);
+                LowLevelModule lowLevelModule = module.Root.ToLowLevel(setting);
                 CancellationToken token = CancellationToken.None;
                 Interpreter interpreter = new Interpreter(setting);
 
@@ -101,7 +101,7 @@ namespace Brainfuck.Repl
 
                     interpreter.OnStepStart += arg =>
                     {
-                        PrintOnStepStartEventArgs(arg, operations);
+                        PrintOnStepStartEventArgs(arg, lowLevelModule.Operations);
                         ConsoleKeyInfo key = Console.ReadKey();
 
                         if (key.Key == ConsoleKey.Escape)
@@ -115,7 +115,7 @@ namespace Brainfuck.Repl
                 {
                     try
                     {
-                        interpreter.Execute(operations, token);
+                        interpreter.Execute(lowLevelModule, token);
                     }
                     catch (OperationCanceledException)
                     {
@@ -181,11 +181,11 @@ namespace Brainfuck.Repl
             else if (command.EmitLowLevelIntermediationCode)
             {
                 Console.Error.WriteLine();
-                var operations = module.Root.ToLowLevel(setting.WithUseDynamicBuffer(true));
+                var lowLevelModule = module.Root.ToLowLevel(setting.WithUseDynamicBuffer(true));
 
-                for (int i = 0; i < operations.Length; i++)
+                for (int i = 0; i < lowLevelModule.Operations.Length; i++)
                 {
-                    Console.Out.WriteLine($"{i,4}  {operations[i]}");
+                    Console.Out.WriteLine($"{i,4}  {lowLevelModule.Operations[i]}");
                 }
             }
             else

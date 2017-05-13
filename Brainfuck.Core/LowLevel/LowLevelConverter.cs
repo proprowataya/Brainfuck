@@ -9,7 +9,7 @@ namespace Brainfuck.Core.LowLevel
 {
     public static class LowLevelConverter
     {
-        public static ImmutableArray<LowLevelOperation> ToLowLevel(this IOperation operation, Setting setting)
+        public static LowLevelModule ToLowLevel(this IOperation operation, Setting setting)
         {
             var visitor = new Visitor(setting);
             operation.Accept(visitor);
@@ -20,7 +20,8 @@ namespace Brainfuck.Core.LowLevel
                 list = AddEnsureBufferCode(list);
             }
 
-            return list.Concat(new[] { new LowLevelOperation(Opcode.Return) }).ToImmutableArray();
+            var operations = list.Concat(new[] { new LowLevelOperation(Opcode.Return) }).ToImmutableArray();
+            return new LowLevelModule(operations, 0);
         }
 
         private static IReadOnlyList<LowLevelOperation> AddEnsureBufferCode(IReadOnlyList<LowLevelOperation> list)
@@ -34,7 +35,7 @@ namespace Brainfuck.Core.LowLevel
             {
                 if (maxOffsetDiff > 0)
                 {
-                    result.Add(new LowLevelOperation(Opcode.EnsureBuffer, value: (short)maxOffsetDiff));
+                    result.Add(new LowLevelOperation(Opcode.EnsureBuffer, value: maxOffsetDiff));
                 }
 
                 foreach (var t in delayed)
@@ -58,7 +59,7 @@ namespace Brainfuck.Core.LowLevel
                 }
 
                 delayed.Add((op, i));
-                maxOffsetDiff = Math.Max(maxOffsetDiff, offset + Math.Max(op.Src, op.Dest));
+                maxOffsetDiff = Math.Max(maxOffsetDiff, offset + Math.Max(op.Src.Offset, op.Dest.Offset));
 
                 if (op.Opcode == Opcode.AddPtr)
                 {
@@ -83,7 +84,7 @@ namespace Brainfuck.Core.LowLevel
                         result[i] = new LowLevelOperation(result[i].Opcode,
                                                             src: result[i].Src,
                                                             dest: result[i].Dest,
-                                                            value: (short)addressMap[result[i].Value]);
+                                                            value: addressMap[result[i].Value]);
                         break;
                     default:
                         break;
@@ -116,7 +117,7 @@ namespace Brainfuck.Core.LowLevel
                 int end = list.Count - 1;
 
                 // Correct jump address
-                list[begin] = new LowLevelOperation(Opcode.BrFalse, src: (short)op.Src.Offset, value: (short)end);
+                list[begin] = new LowLevelOperation(Opcode.BrFalse, src: Variable.Memory(op.Src.Offset), value: end);
             }
 
             public void Visit(RoopUnitOperation op)
@@ -125,10 +126,10 @@ namespace Brainfuck.Core.LowLevel
                 list.Add(default(LowLevelOperation));    // Dummy
                 EmitOperations(op.Operations, op.PtrChange);
                 int end = list.Count;
-                list.Add(new LowLevelOperation(Opcode.BrTrue, src: (short)op.Src.Offset, value: (short)begin));
+                list.Add(new LowLevelOperation(Opcode.BrTrue, src: Variable.Memory(op.Src.Offset), value: begin));
 
                 // Correct jump address
-                list[begin] = new LowLevelOperation(Opcode.BrFalse, src: (short)op.Src.Offset, value: (short)end);
+                list[begin] = new LowLevelOperation(Opcode.BrFalse, src: Variable.Memory(op.Src.Offset), value: end);
             }
 
             public void EmitOperations(ImmutableArray<IOperation> operations, int ptrChange)
@@ -150,33 +151,33 @@ namespace Brainfuck.Core.LowLevel
             {
                 if (ptrChange != 0)
                 {
-                    list.Add(new LowLevelOperation(Opcode.AddPtr, value: (short)ptrChange));
+                    list.Add(new LowLevelOperation(Opcode.AddPtr, value: ptrChange));
                 }
             }
 
             public void Visit(AssignOperation op)
             {
-                list.Add(new LowLevelOperation(Opcode.Assign, dest: (short)op.Dest.Offset, value: (short)op.Value));
+                list.Add(new LowLevelOperation(Opcode.Assign, dest: Variable.Memory(op.Dest.Offset), value: op.Value));
             }
 
             public void Visit(AddAssignOperation op)
             {
-                list.Add(new LowLevelOperation(Opcode.AddAssign, dest: (short)op.Dest.Offset, value: (short)op.Value));
+                list.Add(new LowLevelOperation(Opcode.AddAssign, dest: Variable.Memory(op.Dest.Offset), value: op.Value));
             }
 
             public void Visit(MultAddAssignOperation op)
             {
-                list.Add(new LowLevelOperation(Opcode.MultAddAssign, dest: (short)op.Dest.Offset, src: (short)op.Src.Offset, value: (short)op.Value));
+                list.Add(new LowLevelOperation(Opcode.MultAddAssign, dest: Variable.Memory(op.Dest.Offset), src: Variable.Memory(op.Src.Offset), value: op.Value));
             }
 
             public void Visit(PutOperation op)
             {
-                list.Add(new LowLevelOperation(Opcode.Put, src: (short)op.Src.Offset));
+                list.Add(new LowLevelOperation(Opcode.Put, src: Variable.Memory(op.Src.Offset)));
             }
 
             public void Visit(ReadOperation op)
             {
-                list.Add(new LowLevelOperation(Opcode.Read, dest: (short)op.Dest.Offset));
+                list.Add(new LowLevelOperation(Opcode.Read, dest: Variable.Memory(op.Dest.Offset)));
             }
         }
     }

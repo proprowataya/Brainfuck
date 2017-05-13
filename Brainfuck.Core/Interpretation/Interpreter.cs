@@ -1,6 +1,7 @@
 ﻿using Brainfuck.Core.LowLevel;
 using System;
 using System.Collections.Immutable;
+using System.Runtime.CompilerServices;
 using System.Threading;
 
 namespace Brainfuck.Core.Interpretation
@@ -15,36 +16,36 @@ namespace Brainfuck.Core.Interpretation
             Setting = setting;
         }
 
-        public void Execute(ImmutableArray<LowLevelOperation> operations, CancellationToken token = default(CancellationToken))
+        public void Execute(LowLevelModule module, CancellationToken token = default(CancellationToken))
         {
             if (Setting.ElementType == typeof(Byte))
             {
-                Execute<Byte, ByteOperator>(operations, token);
+                Execute<Byte, ByteOperator>(module, token);
             }
             else if (Setting.ElementType == typeof(Int16))
             {
-                Execute<Int16, Int16Operator>(operations, token);
+                Execute<Int16, Int16Operator>(module, token);
             }
             else if (Setting.ElementType == typeof(Int32))
             {
                 if (Setting.UnsafeCode)
                 {
-                    ExecuteUnsafeInt32(operations, token);
+                    ExecuteUnsafeInt32(module, token);
                 }
                 else
                 {
-                    Execute<Int32, Int32Operator>(operations, token);
+                    Execute<Int32, Int32Operator>(module, token);
                 }
             }
             else if (Setting.ElementType == typeof(Int64))
             {
                 if (Setting.UnsafeCode)
                 {
-                    ExecuteUnsafeInt64(operations, token);
+                    ExecuteUnsafeInt64(module, token);
                 }
                 else
                 {
-                    Execute<Int64, Int64Operator>(operations, token);
+                    Execute<Int64, Int64Operator>(module, token);
                 }
             }
             else
@@ -53,10 +54,11 @@ namespace Brainfuck.Core.Interpretation
             }
         }
 
-        private void Execute<T, TOperator>(ImmutableArray<LowLevelOperation> operations, CancellationToken token) where TOperator : IIntOperator<T>
+        private void Execute<T, TOperator>(LowLevelModule module, CancellationToken token) where TOperator : IIntOperator<T>
         {
             TOperator top = default(TOperator);
             T[] buffer = new T[Setting.BufferSize];
+            T[] registers = new T[module.NumRegisters];
             int ptr = 0;
             long step = 0;
 
@@ -65,7 +67,7 @@ namespace Brainfuck.Core.Interpretation
                 OnStepStart?.Invoke(new OnStepStartEventArgs(buffer, ptr, i, step));
                 token.ThrowIfCancellationRequested();
 
-                LowLevelOperation op = operations[i];
+                LowLevelOperation op = module.Operations[i];
                 switch (op.Opcode)
                 {
                     case Opcode.AddPtr:
@@ -75,35 +77,35 @@ namespace Brainfuck.Core.Interpretation
                         }
                     case Opcode.Assign:
                         {
-                            buffer[ptr + op.Dest] = top.FromInt(op.Value);
+                            GetRef(op.Dest, buffer, ptr, registers) = top.FromInt(op.Value);
                             break;
                         }
                     case Opcode.AddAssign:
                         {
-                            ref T src = ref buffer[ptr + op.Dest];
+                            ref T src = ref GetRef(op.Dest, buffer, ptr, registers);
                             src = top.Add(src, op.Value);
                             break;
                         }
                     case Opcode.MultAddAssign:
                         {
-                            ref T src = ref buffer[ptr + op.Src];
-                            ref T dest = ref buffer[ptr + op.Dest];
+                            ref T src = ref GetRef(op.Src, buffer, ptr, registers);
+                            ref T dest = ref GetRef(op.Dest, buffer, ptr, registers);
                             dest = top.Add(dest, top.Mult(src, op.Value));
                             break;
                         }
                     case Opcode.Put:
                         {
-                            Put(top.ToChar(buffer[ptr + op.Src]));
+                            Put(top.ToChar(GetRef(op.Src, buffer, ptr, registers)));
                             break;
                         }
                     case Opcode.Read:
                         {
-                            buffer[ptr + op.Dest] = top.FromInt(Read());
+                            GetRef(op.Dest, buffer, ptr, registers) = top.FromInt(Read());
                             break;
                         }
                     case Opcode.BrTrue:
                         {
-                            if (top.IsNotZero(buffer[ptr + op.Src]))
+                            if (top.IsNotZero(GetRef(op.Src, buffer, ptr, registers)))
                             {
                                 i = op.Value;
                             }
@@ -111,7 +113,7 @@ namespace Brainfuck.Core.Interpretation
                         }
                     case Opcode.BrFalse:
                         {
-                            if (top.IsZero(buffer[ptr + op.Src]))
+                            if (top.IsZero(GetRef(op.Src, buffer, ptr, registers)))
                             {
                                 i = op.Value;
                             }
@@ -135,6 +137,19 @@ namespace Brainfuck.Core.Interpretation
                     default:
                         throw new InvalidOperationException();
                 }
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static ref T GetRef<T>(Variable var, T[] buffer, int ptr, T[] registers)
+        {
+            if (var.IsRegister)
+            {
+                return ref registers[var.RegisterNo];
+            }
+            else
+            {
+                return ref buffer[ptr + var.Offset];
             }
         }
 

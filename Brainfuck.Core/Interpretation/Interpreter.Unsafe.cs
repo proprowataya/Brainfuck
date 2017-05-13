@@ -8,13 +8,15 @@ namespace Brainfuck.Core.Interpretation
 {
     public unsafe partial class Interpreter
     {
-        private unsafe void ExecuteUnsafeInt32(ImmutableArray<LowLevelOperation> operations, CancellationToken token)
+        private unsafe void ExecuteUnsafeInt32(LowLevelModule module, CancellationToken token)
         {
             Int32[] buffer = new Int32[Setting.BufferSize];
+            Int32[] registers = new Int32[module.NumRegisters];
             long step = 0;
 
-            fixed (LowLevelOperation* opBase = operations.ToArray())
+            fixed (LowLevelOperation* opBase = module.Operations.ToArray())
             fixed (Int32* ptrBase = buffer)
+            fixed (Int32* reg = registers)
             {
                 Int32* ptr = ptrBase;
                 LowLevelOperation* op = opBase;
@@ -33,32 +35,32 @@ namespace Brainfuck.Core.Interpretation
                             }
                         case Opcode.Assign:
                             {
-                                ptr[op->Dest] = op->Value;
+                                GetRef(op->Dest, ptr, reg) = op->Value;
                                 break;
                             }
                         case Opcode.AddAssign:
                             {
-                                ptr[op->Dest] += op->Value;
+                                GetRef(op->Dest, ptr, reg) += op->Value;
                                 break;
                             }
                         case Opcode.MultAddAssign:
                             {
-                                ptr[op->Dest] += ptr[op->Src] * op->Value;
+                                GetRef(op->Dest, ptr, reg) += GetRef(op->Src, ptr, reg) * op->Value;
                                 break;
                             }
                         case Opcode.Put:
                             {
-                                Put((char)ptr[op->Src]);
+                                Put((char)GetRef(op->Src, ptr, reg));
                                 break;
                             }
                         case Opcode.Read:
                             {
-                                ptr[op->Dest] = Read();
+                                GetRef(op->Dest, ptr, reg) = Read();
                                 break;
                             }
                         case Opcode.BrTrue:
                             {
-                                if (ptr[op->Src] != 0)
+                                if (GetRef(op->Src, ptr, reg) != 0)
                                 {
                                     op = opBase + op->Value;
                                 }
@@ -66,7 +68,7 @@ namespace Brainfuck.Core.Interpretation
                             }
                         case Opcode.BrFalse:
                             {
-                                if (ptr[op->Src] == 0)
+                                if (GetRef(op->Src, ptr, reg) == 0)
                                 {
                                     op = opBase + op->Value;
                                 }
@@ -85,13 +87,27 @@ namespace Brainfuck.Core.Interpretation
             }
         }
 
-        private unsafe void ExecuteUnsafeInt64(ImmutableArray<LowLevelOperation> operations, CancellationToken token)
+        private unsafe ref Int32 GetRef(Variable var, Int32* ptr, Int32* reg)
+        {
+            if (var.IsRegister)
+            {
+                return ref reg[var.RegisterNo];
+            }
+            else
+            {
+                return ref ptr[var.Offset];
+            }
+        }
+
+        private unsafe void ExecuteUnsafeInt64(LowLevelModule module, CancellationToken token)
         {
             Int64[] buffer = new Int64[Setting.BufferSize];
+            Int64[] registers = new Int64[module.NumRegisters];
             long step = 0;
 
-            fixed (LowLevelOperation* opBase = operations.ToArray())
+            fixed (LowLevelOperation* opBase = module.Operations.ToArray())
             fixed (Int64* ptrBase = buffer)
+            fixed (Int64* reg = registers)
             {
                 Int64* ptr = ptrBase;
                 LowLevelOperation* op = opBase;
@@ -110,32 +126,32 @@ namespace Brainfuck.Core.Interpretation
                             }
                         case Opcode.Assign:
                             {
-                                ptr[op->Dest] = op->Value;
+                                GetRef(op->Dest, ptr, reg) = op->Value;
                                 break;
                             }
                         case Opcode.AddAssign:
                             {
-                                ptr[op->Dest] += op->Value;
+                                GetRef(op->Dest, ptr, reg) += op->Value;
                                 break;
                             }
                         case Opcode.MultAddAssign:
                             {
-                                ptr[op->Dest] += ptr[op->Src] * op->Value;
+                                GetRef(op->Dest, ptr, reg) += GetRef(op->Src, ptr, reg) * op->Value;
                                 break;
                             }
                         case Opcode.Put:
                             {
-                                Put((char)ptr[op->Src]);
+                                Put((char)GetRef(op->Src, ptr, reg));
                                 break;
                             }
                         case Opcode.Read:
                             {
-                                ptr[op->Dest] = Read();
+                                GetRef(op->Dest, ptr, reg) = Read();
                                 break;
                             }
                         case Opcode.BrTrue:
                             {
-                                if (ptr[op->Src] != 0)
+                                if (GetRef(op->Src, ptr, reg) != 0)
                                 {
                                     op = opBase + op->Value;
                                 }
@@ -143,7 +159,7 @@ namespace Brainfuck.Core.Interpretation
                             }
                         case Opcode.BrFalse:
                             {
-                                if (ptr[op->Src] == 0)
+                                if (GetRef(op->Src, ptr, reg) == 0)
                                 {
                                     op = opBase + op->Value;
                                 }
@@ -159,6 +175,18 @@ namespace Brainfuck.Core.Interpretation
                             throw new InvalidOperationException();
                     }
                 }
+            }
+        }
+
+        private unsafe ref Int64 GetRef(Variable var, Int64* ptr, Int64* reg)
+        {
+            if (var.IsRegister)
+            {
+                return ref reg[var.RegisterNo];
+            }
+            else
+            {
+                return ref ptr[var.Offset];
             }
         }
     }
