@@ -7,7 +7,7 @@ using System.Text;
 
 namespace Brainfuck.Core.LowLevel
 {
-    public static class LowLevelConverter
+    public static partial class LowLevelConverter
     {
         public static LowLevelModule ToLowLevel(this IOperation operation, Setting setting)
         {
@@ -15,13 +15,19 @@ namespace Brainfuck.Core.LowLevel
             operation.Accept(visitor);
 
             IReadOnlyList<LowLevelOperation> list = visitor.list;
+            int numRegisters = 0;
             if (setting.UseDynamicBuffer)
             {
                 list = AddEnsureBufferCode(list);
             }
 
+            if (setting.UseRegisterAllocation)
+            {
+                (list, numRegisters) = OptimizeRegisterAlloc(list);
+            }
+
             var operations = list.Concat(new[] { new LowLevelOperation(Opcode.Return) }).ToImmutableArray();
-            return new LowLevelModule(operations, 0);
+            return new LowLevelModule(operations, numRegisters);
         }
 
         private static IReadOnlyList<LowLevelOperation> AddEnsureBufferCode(IReadOnlyList<LowLevelOperation> list)
