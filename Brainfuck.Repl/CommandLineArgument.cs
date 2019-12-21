@@ -73,23 +73,14 @@ namespace Brainfuck.Repl
                 "Specify integer size (VALUE: 8, 16, 32, 64).",
                 (int v) =>
                 {
-                    switch (v)
+                    ElementType = v switch
                     {
-                        case 8:
-                            ElementType = typeof(Byte);
-                            break;
-                        case 16:
-                            ElementType = typeof(Int16);
-                            break;
-                        case 32:
-                            ElementType = typeof(Int32);
-                            break;
-                        case 64:
-                            ElementType = typeof(Int64);
-                            break;
-                        default:
-                            throw new OptionException($"Invalid size: {v}", "size");
-                    }
+                        8 => typeof(Byte),
+                        16 => typeof(Int16),
+                        32 => typeof(Int32),
+                        64 => typeof(Int64),
+                        _ => throw new OptionException($"Invalid size: {v}", "size"),
+                    };
                 }
             },
 #if false

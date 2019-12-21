@@ -78,18 +78,16 @@ namespace Brainfuck.Test
                 module = new Optimizer(Setting.Default).Optimize(module);
             }
 
-            using (var reader = new StringReader(stdin))
-            using (var writer = new StringWriter())
-            {
-                Console.SetIn(reader);
-                Console.SetOut(writer);
-                action(module);
-                Console.Out.Flush();
-                return writer.ToString().TrimEnd();
-            }
+            using var reader = new StringReader(stdin);
+            using var writer = new StringWriter();
+
+            Console.SetIn(reader);
+            Console.SetOut(writer);
+            action(module);
+            Console.Out.Flush();
+            return writer.ToString().TrimEnd();
         }
 
-        private const int DefaultBufferSize = 1;
         private static readonly Type[] TestTypes = { typeof(Byte), typeof(Int16), typeof(Int32), typeof(Int64) };
 
         // (object description, Action<Module> action, bool optimize)

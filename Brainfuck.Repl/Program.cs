@@ -8,7 +8,6 @@ using Brainfuck.Core.Syntax;
 using System;
 using System.Collections.Immutable;
 using System.Diagnostics;
-using System.Text;
 using System.Threading;
 
 namespace Brainfuck.Repl
@@ -28,7 +27,6 @@ namespace Brainfuck.Repl
 
         public static void Main(string[] args)
         {
-            Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
             Console.Error.WriteLine("Brainfuck Interpreter on .NET Core");
             Console.Error.WriteLine();
 

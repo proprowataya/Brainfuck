@@ -117,15 +117,12 @@ namespace Brainfuck.Core.Optimization
 
         private static bool HasNoEffect(IOperation operation)
         {
-            switch (operation)
+            return operation switch
             {
-                case AddAssignOperation op:
-                    return op.Value == 0;
-                case MultAddAssignOperation op:
-                    return op.Value == 0;
-                default:
-                    return false;
-            }
+                AddAssignOperation op => op.Value == 0,
+                MultAddAssignOperation op => op.Value == 0,
+                _ => false,
+            };
         }
     }
 }

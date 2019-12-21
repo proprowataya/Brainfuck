@@ -8,8 +8,8 @@ namespace Brainfuck.Core.Analysis
         public static Module Parse(string source)
         {
             int i = 0;
-            var t = ParseUnit(source, 0, ref i);
-            return new Module(source, new BlockUnitOperation(t.operations, t.ptrChange));
+            var (operations, ptrChange) = ParseUnit(source, 0, ref i);
+            return new Module(source, new BlockUnitOperation(operations, ptrChange));
         }
 
         private static (ImmutableArray<IOperation> operations, int ptrChange) ParseUnit(string source, int firstOffset, ref int i)
@@ -42,8 +42,8 @@ namespace Brainfuck.Core.Analysis
                     case '[':
                         {
                             i++; // '['
-                            var t = ParseUnit(source, offset, ref i);
-                            builder.Add(new RoopUnitOperation(t.operations, t.ptrChange, new MemoryLocation(offset)));
+                            var (operations, ptrChange) = ParseUnit(source, offset, ref i);
+                            builder.Add(new RoopUnitOperation(operations, ptrChange, new MemoryLocation(offset)));
                             break;
                         }
                     case ']':   // Unreachable

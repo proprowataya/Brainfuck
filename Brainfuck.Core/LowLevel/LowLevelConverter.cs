@@ -3,7 +3,6 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using System.Text;
 
 namespace Brainfuck.Core.LowLevel
 {
@@ -37,10 +36,10 @@ namespace Brainfuck.Core.LowLevel
                     result.Add(new LowLevelOperation(Opcode.EnsureBuffer, value: (short)maxOffsetDiff));
                 }
 
-                foreach (var t in delayed)
+                foreach (var (operation, originalIndex) in delayed)
                 {
-                    addressMap[t.originalIndex] = result.Count;
-                    result.Add(t.operation);
+                    addressMap[originalIndex] = result.Count;
+                    result.Add(operation);
                 }
 
                 delayed.Clear();
@@ -111,7 +110,7 @@ namespace Brainfuck.Core.LowLevel
             public void Visit(IfTrueUnitOperation op)
             {
                 int begin = list.Count;
-                list.Add(default(LowLevelOperation));    // Dummy
+                list.Add(default);  // Dummy
                 EmitOperations(op.Operations, op.PtrChange);
                 int end = list.Count - 1;
 
@@ -122,7 +121,7 @@ namespace Brainfuck.Core.LowLevel
             public void Visit(RoopUnitOperation op)
             {
                 int begin = list.Count;
-                list.Add(default(LowLevelOperation));    // Dummy
+                list.Add(default);  // Dummy
                 EmitOperations(op.Operations, op.PtrChange);
                 int end = list.Count;
                 list.Add(new LowLevelOperation(Opcode.BrTrue, src: (short)op.Src.Offset, value: (short)begin));

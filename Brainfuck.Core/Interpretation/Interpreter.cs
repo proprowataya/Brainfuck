@@ -15,7 +15,7 @@ namespace Brainfuck.Core.Interpretation
             Setting = setting;
         }
 
-        public void Execute(ImmutableArray<LowLevelOperation> operations, CancellationToken token = default(CancellationToken))
+        public void Execute(ImmutableArray<LowLevelOperation> operations, CancellationToken token = default)
         {
             if (Setting.ElementType == typeof(Byte))
             {
@@ -55,7 +55,7 @@ namespace Brainfuck.Core.Interpretation
 
         private void Execute<T, TOperator>(ImmutableArray<LowLevelOperation> operations, CancellationToken token) where TOperator : IIntOperator<T>
         {
-            TOperator top = default(TOperator);
+            TOperator top = default;
             T[] buffer = new T[Setting.BufferSize];
             int ptr = 0;
             long step = 0;
