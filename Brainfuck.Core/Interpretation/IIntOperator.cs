@@ -13,7 +13,7 @@ namespace Brainfuck.Core.Interpretation
         char ToChar(T value);
     }
 
-    internal struct ByteOperator : IIntOperator<Byte>
+    internal readonly struct ByteOperator : IIntOperator<Byte>
     {
         public Byte Add(Byte a, int b) => (Byte)(a + b);
         public Byte Add(Byte a, Byte b) => (Byte)(a + b);
@@ -24,7 +24,7 @@ namespace Brainfuck.Core.Interpretation
         public char ToChar(Byte value) => (char)value;
     }
 
-    internal struct Int16Operator : IIntOperator<Int16>
+    internal readonly struct Int16Operator : IIntOperator<Int16>
     {
         public Int16 Add(Int16 a, int b) => (Int16)(a + b);
         public Int16 Add(Int16 a, Int16 b) => (Int16)(a + b);
@@ -35,7 +35,7 @@ namespace Brainfuck.Core.Interpretation
         public char ToChar(Int16 value) => (char)value;
     }
 
-    internal struct Int32Operator : IIntOperator<Int32>
+    internal readonly struct Int32Operator : IIntOperator<Int32>
     {
         public Int32 Add(Int32 a, int b) => (Int32)(a + b);
         public Int32 Mult(Int32 a, int b) => (Int32)(a * b);
@@ -45,7 +45,7 @@ namespace Brainfuck.Core.Interpretation
         public char ToChar(Int32 value) => (char)value;
     }
 
-    internal struct Int64Operator : IIntOperator<Int64>
+    internal readonly struct Int64Operator : IIntOperator<Int64>
     {
         public Int64 Add(Int64 a, int b) => (Int64)(a + b);
         public Int64 Add(Int64 a, Int64 b) => (Int64)(a + b);

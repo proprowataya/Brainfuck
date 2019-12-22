@@ -1,6 +1,6 @@
 ﻿namespace Brainfuck.Core.Syntax
 {
-    public struct MemoryLocation
+    public readonly struct MemoryLocation
     {
         public static readonly MemoryLocation Zero = new MemoryLocation(0);
 

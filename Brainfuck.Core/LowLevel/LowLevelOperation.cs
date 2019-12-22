@@ -1,6 +1,6 @@
 ﻿namespace Brainfuck.Core.LowLevel
 {
-    public struct LowLevelOperation
+    public readonly struct LowLevelOperation
     {
         public Opcode Opcode { get; }
         public short Dest { get; }
