@@ -65,7 +65,7 @@ namespace Brainfuck.Repl
         protected void RunByILCompiler(string source, bool printHeader, bool? overrideUnsafeCode = null)
         {
             bool unsafeCode = overrideUnsafeCode ?? this.setting.UnsafeCode;
-            Setting setting = this.setting.WithUnsafeCode(unsafeCode);  // overwrite
+            Setting setting = this.setting with { UnsafeCode = unsafeCode };    // overwrite
 
             StartProgram(() =>
             {
@@ -79,10 +79,10 @@ namespace Brainfuck.Repl
         protected void RunByInterpreter(string source, bool printHeader, bool? overrideUnsafeCode = null)
         {
             bool unsafeCode = overrideUnsafeCode ?? (this.setting.UnsafeCode && !command.StepExecution);
-            Setting setting = this.setting.WithUnsafeCode(unsafeCode);  // overwrite
+            Setting setting = this.setting with { UnsafeCode = unsafeCode };    // overwrite
             if (command.StepExecution)
             {
-                setting = setting.WithBufferSize(1).WithUseDynamicBuffer(true);
+                setting = setting with { BufferSize = 1, UseDynamicBuffer = true };
             }
 
             StartProgram(() =>
@@ -157,7 +157,7 @@ namespace Brainfuck.Repl
             Module module = Parser.Parse(source);
             if (command.Optimize)
             {
-                module = new Optimizer(setting.WithFavor(favor)).Optimize(module);
+                module = new Optimizer(setting with { Favor = favor }).Optimize(module);
             }
 
             return module;
@@ -179,7 +179,7 @@ namespace Brainfuck.Repl
             else if (command.EmitLowLevelIntermediationCode)
             {
                 Console.Error.WriteLine();
-                var operations = module.Root.ToLowLevel(setting.WithUseDynamicBuffer(true));
+                var operations = module.Root.ToLowLevel(setting with { UseDynamicBuffer = true });
 
                 for (int i = 0; i < operations.Length; i++)
                 {

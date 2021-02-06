@@ -42,8 +42,7 @@ namespace Brainfuck.Repl
         private void ParseInternal(string[] args, out Setting setting)
         {
             FileNames = Option.Parse(args);
-            setting = Setting.Default.WithElementType(ElementType)
-                                     .WithUnsafeCode(!CheckRange);
+            setting = Setting.Default with { ElementType = ElementType, UnsafeCode = !CheckRange };
         }
 
         public static void PrintHelp()

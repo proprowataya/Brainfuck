@@ -101,12 +101,12 @@ namespace Brainfuck.Test
                     {
                         foreach (var Unsafe in new[] { false, true })
                         {
-                            Setting setting = Setting.Default.WithElementType(Type).WithUnsafeCode(Unsafe);
+                            Setting setting = Setting.Default with { ElementType = Type, UnsafeCode = Unsafe };
 
                             yield return new object[]
                             {
                                 new { Type, Optimize },
-                                GetInterpreterAction(setting.WithUseDynamicBuffer(!Unsafe)),
+                                GetInterpreterAction(setting with { UseDynamicBuffer = !Unsafe }),
                                 Optimize
                             };
 

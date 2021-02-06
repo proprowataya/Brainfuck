@@ -33,77 +33,37 @@ namespace Brainfuck.Core.Syntax
 
     #region UnitOperations
 
-    public sealed class BlockUnitOperation : IUnitOperation
+    public sealed record BlockUnitOperation(ImmutableArray<IOperation> Operations, int PtrChange) : IUnitOperation
     {
-        public ImmutableArray<IOperation> Operations { get; }
-        public int PtrChange { get; }
-
-        public BlockUnitOperation(ImmutableArray<IOperation> operations, int ptrChange)
-        {
-            Operations = operations;
-            PtrChange = ptrChange;
-        }
-
         public IOperation WithAdd(int delta) =>
-            new BlockUnitOperation(Operations.Select(o => o.WithAdd(delta)).ToImmutableArray(), PtrChange);
+            this with { Operations = Operations.Select(o => o.WithAdd(delta)).ToImmutableArray() };
 
-        public IUnitOperation WithOperations(ImmutableArray<IOperation> newOperations) =>
-            new BlockUnitOperation(newOperations, PtrChange);
-
-        public IUnitOperation WithPtrChange(int newPtrChange)
-            => new BlockUnitOperation(Operations, newPtrChange);
+        public IUnitOperation WithOperations(ImmutableArray<IOperation> newOperations) => this with { Operations = newOperations };
+        public IUnitOperation WithPtrChange(int newPtrChange) => this with { PtrChange = newPtrChange };
 
         public void Accept(IVisitor visitor) => visitor.Visit(this);
         public T Accept<T>(IVisitor<T> visitor) => visitor.Visit(this);
     }
 
-    public sealed class IfTrueUnitOperation : IUnitOperation, IReadOperation
+    public sealed record IfTrueUnitOperation(ImmutableArray<IOperation> Operations, int PtrChange, MemoryLocation Src) : IUnitOperation, IReadOperation
     {
-        public ImmutableArray<IOperation> Operations { get; }
-        public int PtrChange { get; }
-        public MemoryLocation Src { get; }
-
-        public IfTrueUnitOperation(ImmutableArray<IOperation> operations, int ptrChange, MemoryLocation src)
-        {
-            Operations = operations;
-            PtrChange = ptrChange;
-            Src = src;
-        }
-
         public IOperation WithAdd(int delta) =>
-            new IfTrueUnitOperation(Operations.Select(o => o.WithAdd(delta)).ToImmutableArray(), PtrChange, Src.WithAdd(delta));
+            this with { Operations = Operations.Select(o => o.WithAdd(delta)).ToImmutableArray(), Src = Src.WithAdd(delta) };
 
-        public IUnitOperation WithOperations(ImmutableArray<IOperation> newOperations) =>
-            new IfTrueUnitOperation(newOperations, PtrChange, Src);
-
-        public IUnitOperation WithPtrChange(int newPtrChange)
-            => new IfTrueUnitOperation(Operations, newPtrChange, Src);
+        public IUnitOperation WithOperations(ImmutableArray<IOperation> newOperations) => this with { Operations = newOperations };
+        public IUnitOperation WithPtrChange(int newPtrChange) => this with { PtrChange = newPtrChange };
 
         public void Accept(IVisitor visitor) => visitor.Visit(this);
         public T Accept<T>(IVisitor<T> visitor) => visitor.Visit(this);
     }
 
-    public sealed class RoopUnitOperation : IUnitOperation, IReadOperation
+    public sealed record RoopUnitOperation(ImmutableArray<IOperation> Operations, int PtrChange, MemoryLocation Src) : IUnitOperation, IReadOperation
     {
-        public ImmutableArray<IOperation> Operations { get; }
-        public int PtrChange { get; }
-        public MemoryLocation Src { get; }
-
-        public RoopUnitOperation(ImmutableArray<IOperation> operations, int ptrChange, MemoryLocation src)
-        {
-            Operations = operations;
-            PtrChange = ptrChange;
-            Src = src;
-        }
-
         public IOperation WithAdd(int delta) =>
-            new RoopUnitOperation(Operations.Select(o => o.WithAdd(delta)).ToImmutableArray(), PtrChange, Src.WithAdd(delta));
+            this with { Operations = Operations.Select(o => o.WithAdd(delta)).ToImmutableArray(), Src = Src.WithAdd(delta) };
 
-        public IUnitOperation WithOperations(ImmutableArray<IOperation> newOperations) =>
-            new RoopUnitOperation(newOperations, PtrChange, Src);
-
-        public IUnitOperation WithPtrChange(int newPtrChange)
-            => new RoopUnitOperation(Operations, newPtrChange, Src);
+        public IUnitOperation WithOperations(ImmutableArray<IOperation> newOperations) => this with { Operations = newOperations };
+        public IUnitOperation WithPtrChange(int newPtrChange) => this with { PtrChange = newPtrChange };
 
         public void Accept(IVisitor visitor) => visitor.Visit(this);
         public T Accept<T>(IVisitor<T> visitor) => visitor.Visit(this);
@@ -113,94 +73,44 @@ namespace Brainfuck.Core.Syntax
 
     #region Other Operations
 
-    public sealed class AddPtrOperation : IOperation
+    public sealed record AddPtrOperation(int Value) : IOperation
     {
-        public int Value { get; }
-
-        public AddPtrOperation(int value)
-        {
-            Value = value;
-        }
-
         public IOperation WithAdd(int delta) => this;
         public void Accept(IVisitor visitor) => visitor.Visit(this);
         public T Accept<T>(IVisitor<T> visitor) => visitor.Visit(this);
     }
 
-    public sealed class AssignOperation : IAssignOperation
+    public sealed record AssignOperation(MemoryLocation Dest, int Value) : IAssignOperation
     {
-        public MemoryLocation Dest { get; }
-        public int Value { get; }
-
-        public AssignOperation(MemoryLocation dest, int value)
-        {
-            Dest = dest;
-            Value = value;
-        }
-
-        public IOperation WithAdd(int delta) => new AssignOperation(Dest.WithAdd(delta), Value);
+        public IOperation WithAdd(int delta) => this with { Dest = Dest.WithAdd(delta) };
         public void Accept(IVisitor visitor) => visitor.Visit(this);
         public T Accept<T>(IVisitor<T> visitor) => visitor.Visit(this);
     }
 
-    public sealed class AddAssignOperation : IAssignOperation
+    public sealed record AddAssignOperation(MemoryLocation Dest, int Value) : IAssignOperation
     {
-        public MemoryLocation Dest { get; }
-        public int Value { get; }
-
-        public AddAssignOperation(MemoryLocation dest, int value)
-        {
-            Dest = dest;
-            Value = value;
-        }
-
-        public IOperation WithAdd(int delta) => new AddAssignOperation(Dest.WithAdd(delta), Value);
+        public IOperation WithAdd(int delta) => this with { Dest = Dest.WithAdd(delta) };
         public void Accept(IVisitor visitor) => visitor.Visit(this);
         public T Accept<T>(IVisitor<T> visitor) => visitor.Visit(this);
     }
 
-    public sealed class MultAddAssignOperation : IAssignOperation, IReadOperation
+    public sealed record MultAddAssignOperation(MemoryLocation Dest, MemoryLocation Src, int Value) : IAssignOperation, IReadOperation
     {
-        public MemoryLocation Dest { get; }
-        public MemoryLocation Src { get; }
-        public int Value { get; }
-
-        public MultAddAssignOperation(MemoryLocation dest, MemoryLocation src, int value)
-        {
-            Dest = dest;
-            Src = src;
-            Value = value;
-        }
-
-        public IOperation WithAdd(int delta) => new MultAddAssignOperation(Dest.WithAdd(delta), Src.WithAdd(delta), Value);
+        public IOperation WithAdd(int delta) => this with { Dest = Dest.WithAdd(delta), Src = Src.WithAdd(delta) };
         public void Accept(IVisitor visitor) => visitor.Visit(this);
         public T Accept<T>(IVisitor<T> visitor) => visitor.Visit(this);
     }
 
-    public sealed class PutOperation : IReadOperation
+    public sealed record PutOperation(MemoryLocation Src) : IReadOperation
     {
-        public MemoryLocation Src { get; }
-
-        public PutOperation(MemoryLocation src)
-        {
-            Src = src;
-        }
-
-        public IOperation WithAdd(int delta) => new PutOperation(Src.WithAdd(delta));
+        public IOperation WithAdd(int delta) => this with { Src = Src.WithAdd(delta) };
         public void Accept(IVisitor visitor) => visitor.Visit(this);
         public T Accept<T>(IVisitor<T> visitor) => visitor.Visit(this);
     }
 
-    public sealed class ReadOperation : IWriteOperation
+    public sealed record ReadOperation(MemoryLocation Dest) : IWriteOperation
     {
-        public MemoryLocation Dest { get; }
-
-        public ReadOperation(MemoryLocation dest)
-        {
-            Dest = dest;
-        }
-
-        public IOperation WithAdd(int delta) => new ReadOperation(Dest.WithAdd(delta));
+        public IOperation WithAdd(int delta) => this with { Dest = Dest.WithAdd(delta) };
         public void Accept(IVisitor visitor) => visitor.Visit(this);
         public T Accept<T>(IVisitor<T> visitor) => visitor.Visit(this);
     }

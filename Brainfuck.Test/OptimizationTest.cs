@@ -17,11 +17,11 @@ namespace Brainfuck.Test
             var optimized = new Optimizer(Setting.Default).Optimize(module);
             var doubleOptimized = new Optimizer(Setting.Default).Optimize(optimized);
             Assert.Equal(
-                optimized.Root.ToLowLevel(Setting.Default.WithUseDynamicBuffer(false)).AsEnumerable(),
-                doubleOptimized.Root.ToLowLevel(Setting.Default.WithUseDynamicBuffer(false)).AsEnumerable());
+                optimized.Root.ToLowLevel(Setting.Default with { UseDynamicBuffer = false }).AsEnumerable(),
+                doubleOptimized.Root.ToLowLevel(Setting.Default with { UseDynamicBuffer = false }).AsEnumerable());
             Assert.Equal(
-                optimized.Root.ToLowLevel(Setting.Default.WithUseDynamicBuffer(true)).AsEnumerable(),
-                doubleOptimized.Root.ToLowLevel(Setting.Default.WithUseDynamicBuffer(true)).AsEnumerable());
+                optimized.Root.ToLowLevel(Setting.Default with { UseDynamicBuffer = true }).AsEnumerable(),
+                doubleOptimized.Root.ToLowLevel(Setting.Default with { UseDynamicBuffer = true }).AsEnumerable());
         }
     }
 }
