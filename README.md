@@ -3,7 +3,7 @@
 A Simple Brainfuck Interpreter on .NET Core
 
 ## Requirement
-- [.NET Core](https://www.microsoft.com/net/core) (>= 1.1.0)
+- [.NET](https://dotnet.microsoft.com/) (>= 5.0)
 
 ## Getting Started
 
@@ -11,10 +11,7 @@ A Simple Brainfuck Interpreter on .NET Core
 ```
 git clone https://github.com/proprowataya/Brainfuck.git
 cd Brainfuck
-dotnet restore
-dotnet build --configuration Release
-cd Brainfuck.Repl/bin/Release/netcoreapp1.0
-dotnet Brainfuck.Repl.dll
+dotnet run --configuration Release --project Brainfuck.Repl
 ```
 
 ### Hello world
